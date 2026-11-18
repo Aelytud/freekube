@@ -3,517 +3,897 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>FreeKube | Instant Free Game Servers on OpenShift</title>
+<title>FreeKube — OpenShift Game Server Hosting</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anton&family=Geist+Mono:wght@400;500;600&family=Geist:wght@400;500;600&display=swap">
 <style>
 :root{
-  --bg:#0b0e14;
-  --bg-soft:#111622;
-  --panel:#151b28;
-  --panel-2:#1b2333;
-  --line:#263147;
-  --line-bright:#354463;
-  --fg:#edf2f7;
-  --dim:#94a3b8;
-  --accent:#5ee062;
-  --accent-2:#38bdf8;
-  --warn:#f59e0b;
-  --err:#fb7185;
-  --radius:14px;
+  --font-display:"Anton",system-ui,sans-serif;
+  --font-sans:"Geist","Inter","Helvetica Neue",Arial,sans-serif;
+  --font-mono:"Geist Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+  --bg:#0a0a0a;
+  --surface:#111111;
+  --surface-raised:#161616;
+  --surface-overlay:#1f1f1f;
+  --border:#262626;
+  --border-strong:#6a6a72;
+  --text:#f4efe8;
+  --text-muted:#a1a1aa;
+  --ink:#f4efe8;
+  --on-ink:#0a0a0b;
+  --scrim:#000000a3;
+  --success:#86d9a3;
+  --success-solid:#3ddc84;
+  --success-subtle:#2fb15f26;
+  --warning:#fcd34d;
+  --warning-solid:#f0b232;
+  --warning-subtle:#f5a52426;
+  --danger:#f4a7a1;
+  --danger-solid:#e5484d;
+  --danger-subtle:#e5484d26;
+  --blue:#8db6fa;
+  --blue-subtle:#3b82f626;
+  --space-1:4px;--space-2:8px;--space-3:12px;--space-4:16px;
+  --space-5:24px;--space-6:32px;--space-7:48px;--space-8:64px;
+  --ease-out:cubic-bezier(.2,.7,.2,1);
+  --shadow-dialog:0 24px 64px #000000b3;
+  color-scheme:dark;
 }
 *{box-sizing:border-box}
-html{scroll-behavior:smooth}
+html{scroll-behavior:smooth;background:var(--bg)}
 body{
   margin:0;
-  background:
-    radial-gradient(900px 500px at 15% -10%, rgba(94,224,98,.11), transparent 60%),
-    radial-gradient(800px 450px at 88% 5%, rgba(56,189,248,.10), transparent 60%),
-    var(--bg);
-  color:var(--fg);
-  font:15px/1.55 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  background:var(--bg);
+  color:var(--text);
+  font:15px/24px var(--font-sans);
+  -webkit-font-smoothing:antialiased;
   min-height:100vh;
-  display:flex;
-  flex-direction:column;
 }
 a{color:inherit}
-header{
-  position:sticky;top:0;z-index:20;
-  backdrop-filter:blur(14px);
-  background:rgba(11,14,20,.78);
-  border-bottom:1px solid var(--line);
-}
-.head-inner{
-  max-width:1120px;margin:0 auto;padding:14px 24px;
-  display:flex;justify-content:space-between;align-items:center;gap:16px;
-}
-.logo{
-  display:flex;align-items:center;gap:10px;
-  font-weight:800;letter-spacing:-.02em;font-size:1.22rem;text-decoration:none;
-}
-.logo-mark{
-  width:32px;height:32px;border-radius:9px;
-  background:linear-gradient(135deg,var(--accent),var(--accent-2));
-  display:grid;place-items:center;color:#07110a;font-weight:900;
-  box-shadow:0 6px 20px rgba(94,224,98,.25);
-}
-.logo b{color:var(--accent)}
-nav{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
-.user-pill{
-  display:inline-flex;align-items:center;gap:8px;
-  padding:6px 12px;border-radius:99px;
-  background:var(--panel);border:1px solid var(--line);
-  font-size:.86rem;color:var(--dim);
-}
-.user-dot{width:8px;height:8px;border-radius:50%;background:var(--accent)}
-button{
-  font:inherit;cursor:pointer;
-  border:1px solid var(--line);background:var(--panel);color:var(--fg);
-  padding:9px 15px;border-radius:9px;font-weight:600;
-  transition:border-color .15s,background .15s,transform .1s,filter .15s;
-}
-button:hover:not(:disabled){border-color:var(--line-bright);background:var(--panel-2)}
-button:active:not(:disabled){transform:translateY(1px)}
-button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
-button.primary{
-  background:linear-gradient(135deg,var(--accent),#43c655);
-  border-color:transparent;color:#071308;font-weight:700;
-  box-shadow:0 8px 24px rgba(94,224,98,.22);
-}
-button.primary:hover:not(:disabled){filter:brightness(1.06);background:linear-gradient(135deg,var(--accent),#43c655)}
-button.ghost{background:transparent}
-button.danger{color:var(--err);border-color:rgba(251,113,133,.3)}
-button.danger:hover:not(:disabled){background:rgba(251,113,133,.12);border-color:var(--err)}
-button.sm{padding:6px 11px;font-size:.84rem;border-radius:7px}
-button.link{border:0;background:none;color:var(--dim);text-decoration:underline;padding:6px 8px}
-button:disabled{opacity:.48;cursor:not-allowed}
-
-.wrap{max-width:1120px;width:100%;margin:0 auto;padding:0 24px;flex:1}
+code,.mono{font-family:var(--font-mono);font-variant-numeric:tabular-nums}
 .hidden{display:none!important}
+.ah-container{width:100%;max-width:calc(1200px + 2 * var(--space-6));padding:0 var(--space-6);margin:0 auto}
+.ah-overline{font:500 11px/16px var(--font-mono);letter-spacing:.08em;text-transform:uppercase;color:var(--text-muted);margin:0}
 
-/* Hero */
-.hero{
-  display:grid;grid-template-columns:1.15fr .85fr;gap:32px;align-items:center;
-  padding:56px 0 40px;
+/* Buttons (sharp, monochrome ink system) */
+.as-btn,button{
+  display:inline-flex;align-items:center;justify-content:center;gap:8px;
+  height:36px;padding:0 16px;border-radius:0;
+  font:500 13px/1 var(--font-sans);letter-spacing:-.005em;
+  cursor:pointer;text-decoration:none;white-space:nowrap;
+  border:1px solid var(--border);background:var(--surface);color:var(--text);
+  transition:background-color .15s,border-color .15s,color .15s;
 }
-.eyebrow{
+button:hover:not(:disabled),.as-btn:hover:not(:disabled){background:var(--surface-overlay);border-color:var(--border-strong)}
+button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--text);outline-offset:2px}
+button.primary,.as-btn--ink{
+  background:var(--ink);color:var(--on-ink);border-color:var(--ink);
+}
+button.primary:hover:not(:disabled),.as-btn--ink:hover:not(:disabled){
+  background:#e4ded5;border-color:#e4ded5;
+}
+button.ghost{background:transparent;border-color:transparent;color:var(--text-muted)}
+button.ghost:hover:not(:disabled){background:var(--surface-overlay);color:var(--text);border-color:transparent}
+button.danger{color:var(--danger);border-color:#e5484d4d;background:transparent}
+button.danger:hover:not(:disabled){background:var(--danger-subtle);border-color:var(--danger-solid)}
+button.sm{height:32px;padding:0 12px;font-size:12px}
+button.lg{height:44px;padding:0 22px;font-size:14px}
+button.link{border:0;background:none;color:var(--text-muted);text-decoration:underline;padding:0 4px;height:auto}
+button:disabled{opacity:.45;cursor:not-allowed}
+
+/* Public Header */
+.ah-header{
+  position:sticky;top:0;z-index:30;
+  background:color-mix(in srgb,var(--bg) 82%,transparent);
+  -webkit-backdrop-filter:blur(14px) saturate(1.4);
+  backdrop-filter:blur(14px) saturate(1.4);
+  border-bottom:1px solid var(--border);
+}
+.ah-header__inner{
+  display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:var(--space-5);height:64px;
+}
+.as-logo{
+  display:inline-flex;align-items:center;gap:10px;
+  font:600 15px/1 var(--font-sans);letter-spacing:-.01em;text-decoration:none;justify-self:start;
+}
+.as-logo span{color:var(--text-muted);font-weight:400}
+.ah-nav{display:flex;align-items:center;gap:4px}
+.ah-nav a{
+  height:34px;padding:0 12px;display:inline-flex;align-items:center;
+  font:500 13.5px/1 var(--font-sans);color:var(--text-muted);text-decoration:none;
+  transition:color .15s,background-color .15s;
+}
+.ah-nav a:hover{color:var(--text);background:var(--surface-overlay)}
+.ah-header__actions{justify-self:end;display:flex;align-items:center;gap:8px}
+
+/* Landing Hero (im-a.fish editorial punch + ansigned structured grid) */
+.fk-hero{padding:clamp(44px,7vw,84px) 0 var(--space-7)}
+.fk-hero__grid{
+  display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,.85fr);gap:var(--space-6);align-items:end;
+}
+.fk-hero h1{
+  margin:var(--space-3) 0 0;
+  font:400 clamp(48px,6.8vw,96px)/.92 var(--font-display);
+  letter-spacing:.01em;text-transform:uppercase;color:var(--text);
+}
+.fk-hero h1 .stroke{
+  color:transparent;-webkit-text-stroke:1.5px #f4efe866;display:block;
+}
+.fk-hero__facts{
+  display:flex;flex-wrap:wrap;gap:6px 20px;margin:var(--space-5) 0 0;
+  font:500 13px/20px var(--font-mono);color:var(--text-muted);
+}
+.fk-hero__facts span::before{content:"/ ";color:#f4efe844}
+.fk-hero__actions{display:flex;align-items:center;gap:var(--space-4);margin-top:var(--space-5);flex-wrap:wrap}
+.fk-hero__link{
+  font:500 14px/20px var(--font-sans);color:var(--text);
+  text-decoration:underline;text-underline-offset:5px;text-decoration-thickness:1px;
+  background:none;border:0;padding:0;height:auto;
+}
+
+/* Live Panel Widget (from .ah-panel__still) */
+.ah-panel__still{
+  padding:var(--space-4);background:var(--surface);
+  display:flex;flex-direction:column;gap:2px;font-size:13px;line-height:20px;
+}
+.ah-panel__head,.ah-panel__console,.ah-panel__load,.ah-panel__tabs{background:var(--bg)}
+.ah-panel__head{
+  display:flex;align-items:center;justify-content:space-between;gap:var(--space-4);padding:14px 16px;
+}
+.ah-panel__head b{font:500 13.5px/20px var(--font-mono);display:block}
+.ah-panel__head small{font:400 12px/16px var(--font-mono);color:var(--text-muted);display:block}
+.ah-panel__state{display:inline-flex;align-items:center;gap:8px;font:500 12px/1 var(--font-mono);color:var(--text)}
+.dot{width:8px;height:8px;border-radius:999px;background:var(--text-muted);flex:none}
+.dot--ok{background:var(--success-solid)}
+.dot--warn{background:var(--warning-solid)}
+.dot--err{background:var(--danger-solid)}
+.ah-panel__stats{display:grid;grid-template-columns:repeat(3,1fr);gap:2px}
+.ah-panel__stat{background:var(--bg);padding:12px 16px}
+.ah-panel__stat small{display:block;font:500 11px/16px var(--font-mono);text-transform:uppercase;letter-spacing:.06em;color:var(--text-muted)}
+.ah-panel__stat b{display:block;font:500 22px/28px var(--font-mono);margin-top:2px;font-variant-numeric:tabular-nums}
+.ah-panel__tabs{display:flex;gap:var(--space-5);padding:0 16px;font:500 12.5px/1 var(--font-sans)}
+.ah-panel__tabs button{
+  height:auto;padding:12px 0;border:0;background:none;color:var(--text-muted);
+}
+.ah-panel__tabs button.is-on{color:var(--text);box-shadow:inset 0 -2px 0 var(--text)}
+.ah-panel__console{padding:14px 16px;font:400 12px/22px var(--font-mono);flex:1;min-height:132px}
+.ah-panel__console p{margin:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ah-panel__console span{color:var(--text-muted)}
+.ah-panel__input{margin-top:10px!important}
+.ah-panel__input b{font-weight:400;animation:1s step-end infinite ah-caret}
+@keyframes ah-caret{50%{opacity:0}}
+.ah-panel__load{
+  display:flex;flex-wrap:wrap;gap:8px 20px;padding:10px 16px;
+  font:400 12px/20px var(--font-mono);color:var(--text-muted);
+}
+.ah-panel__load span{display:inline-flex;align-items:center;gap:8px}
+.ah-panel__load i{width:56px;height:4px;background:linear-gradient(90deg,var(--text) var(--v,50%),var(--surface-overlay) var(--v,50%))}
+.by-game{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.chip{font:400 11.5px/1 var(--font-mono);padding:4px 8px;background:var(--surface);color:var(--text-muted)}
+.chip b{color:var(--text)}
+
+/* Tech Row (from .ah-techrow) */
+.ah-techrow{
+  display:flex;align-items:center;gap:var(--space-4) var(--space-7);
+  padding:var(--space-5) 0;border-top:1px solid var(--border);border-bottom:1px solid var(--border);
+}
+.ah-techrow p{margin:0;font:500 13px/20px var(--font-sans);color:var(--text-muted);flex:none}
+.ah-techrow ul{
+  margin:0;padding:0;list-style:none;flex:1;
+  display:flex;flex-wrap:wrap;justify-content:space-between;gap:12px 20px;
+}
+.ah-tech{
   display:inline-flex;align-items:center;gap:8px;
-  padding:5px 12px;border-radius:99px;
-  background:rgba(94,224,98,.1);border:1px solid rgba(94,224,98,.28);
-  color:var(--accent);font-size:.82rem;font-weight:600;margin-bottom:16px;
+  font:500 13.5px/20px var(--font-sans);color:var(--text-muted);transition:color .15s;
 }
-.eyebrow .pulse{width:7px;height:7px;border-radius:50%;background:var(--accent);box-shadow:0 0 8px var(--accent)}
-.hero h1{
-  font-size:clamp(2.2rem,4.6vw,3.4rem);line-height:1.08;letter-spacing:-.03em;margin:0 0 14px;
-}
-.grad{
-  background:linear-gradient(90deg,#fff 20%,var(--accent) 65%,var(--accent-2));
-  -webkit-background-clip:text;background-clip:text;color:transparent;
-}
-.hero p{color:var(--dim);font-size:1.05rem;max-width:540px;margin:0 0 24px}
-.hero-actions{display:flex;gap:12px;flex-wrap:wrap}
+.ah-tech:hover{color:var(--text)}
+.ah-tech svg{width:17px;height:17px;flex:none}
 
-/* Cluster Telemetry Card */
-.telemetry{
-  background:linear-gradient(180deg,var(--panel),var(--bg-soft));
-  border:1px solid var(--line);border-radius:16px;padding:22px;
-  box-shadow:0 20px 50px rgba(0,0,0,.35);
+/* Section Heading */
+.ah-sec{padding:var(--space-8) 0 0}
+.ah-sec__head{display:flex;justify-content:space-between;align-items:flex-end;gap:var(--space-5);flex-wrap:wrap;margin-bottom:var(--space-5)}
+.ah-sec__head h2{
+  margin:var(--space-2) 0 0;font:400 clamp(32px,4vw,52px)/.96 var(--font-display);
+  letter-spacing:.01em;text-transform:uppercase;
 }
-.tel-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;font-size:.85rem;color:var(--dim)}
-.tel-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px}
-.tel-box{background:rgba(0,0,0,.28);border:1px solid var(--line);border-radius:10px;padding:12px}
-.tel-box small{display:block;color:var(--dim);font-size:.75rem}
-.tel-box b{display:block;font-size:1.45rem;margin-top:2px;letter-spacing:-.02em}
-.pipeline{
-  display:flex;align-items:center;justify-content:space-between;gap:6px;
-  background:rgba(0,0,0,.25);border:1px solid var(--line);border-radius:10px;padding:10px 12px;
-  font-size:.78rem;color:var(--dim);margin-bottom:14px;overflow:auto;
-}
-.pipe-node{
-  padding:4px 9px;border-radius:6px;background:var(--panel-2);border:1px solid var(--line);
-  color:var(--fg);font-weight:600;white-space:nowrap;
-}
-.by-game{display:flex;flex-wrap:wrap;gap:8px}
-.mini-chip{
-  font-size:.78rem;padding:4px 10px;border-radius:99px;
-  background:rgba(255,255,255,.04);border:1px solid var(--line);color:var(--dim);
-}
-.mini-chip b{color:var(--fg)}
+.ah-sec__sub{margin:0;max-width:440px;color:var(--text-muted);font-size:14.5px;line-height:22px}
 
-/* Sections & Cards */
-.sec-head{display:flex;justify-content:space-between;align-items:flex-end;gap:12px;margin:44px 0 16px;flex-wrap:wrap}
-.sec-head h2{margin:0;font-size:1.45rem;letter-spacing:-.02em}
-.sec-head p{margin:0;color:var(--dim);font-size:.92rem}
-.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:16px}
-.card{
-  background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:20px;
-  display:flex;flex-direction:column;gap:12px;position:relative;overflow:hidden;
-  transition:border-color .15s,transform .15s;
+/* 4-Column Offers Grid (.ah-offers) */
+.ah-offers{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:2px}
+.ah-offer{
+  padding:var(--space-5);background:var(--surface);color:inherit;
+  display:flex;flex-direction:column;text-align:left;border:0;height:auto;
+  align-items:stretch;justify-content:flex-start;cursor:pointer;
+  transition:background-color .15s;
 }
-.card:hover{border-color:var(--line-bright);transform:translateY(-2px)}
-.card-bar{position:absolute;top:0;left:0;right:0;height:3px;background:var(--card-accent,var(--accent))}
-.card-top{display:flex;align-items:center;justify-content:space-between;gap:10px}
-.game-icon{
-  width:38px;height:38px;border-radius:10px;display:grid;place-items:center;
-  background:rgba(255,255,255,.05);border:1px solid var(--line);flex-shrink:0;
+.ah-offer:hover{background:var(--surface-overlay)}
+.ah-offer__top{display:flex;justify-content:space-between;align-items:center;gap:12px}
+.ah-offer__cat{font:500 13px/20px var(--font-sans);color:var(--text-muted)}
+.ah-offer__badge{
+  margin-top:var(--space-4);padding:2px 8px;align-self:flex-start;
+  background:var(--ink);color:var(--on-ink);font:500 11.5px/16px var(--font-sans);
 }
-.card h3{margin:0;font-size:1.1rem}
-.card p{margin:0;color:var(--dim);font-size:.9rem;flex:1}
-.tags{display:flex;flex-wrap:wrap;gap:6px}
-.tag{
-  font-size:.74rem;padding:3px 9px;border-radius:99px;
-  background:rgba(255,255,255,.04);border:1px solid var(--line);color:var(--dim);
+.ah-offer__metric{
+  margin-top:auto;padding-top:var(--space-5);
+  font:500 30px/36px var(--font-mono);letter-spacing:-.03em;
+  display:flex;align-items:baseline;gap:8px;
 }
-.tag.free{color:var(--accent);border-color:rgba(94,224,98,.35);background:rgba(94,224,98,.1);font-weight:700}
+.ah-offer__metric small{font:400 12.5px/18px var(--font-sans);letter-spacing:0;color:var(--text-muted)}
+.ah-offer__name{margin-top:6px;font:600 17px/24px var(--font-sans);color:var(--text)}
+.ah-offer__desc{margin-top:4px;font:400 13.5px/20px var(--font-sans);color:var(--text-muted);white-space:normal}
 
-.steps{
-  display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:14px;margin:20px 0 40px;
+/* 7fr / 5fr Products + Diagram Split (.ah-products) */
+.ah-products{display:grid;grid-template-columns:minmax(0,7fr) minmax(0,5fr);gap:2px}
+.ah-bundle{
+  padding:var(--space-6);background:var(--surface);
+  display:flex;flex-direction:column;gap:var(--space-5);
 }
-.step{background:var(--bg-soft);border:1px solid var(--line);border-radius:12px;padding:16px}
-.step-num{
-  width:26px;height:26px;border-radius:7px;background:var(--panel-2);border:1px solid var(--line);
-  display:grid;place-items:center;font-size:.8rem;font-weight:700;color:var(--accent);margin-bottom:10px;
+.ah-bundle h3{margin:var(--space-2) 0 0;font:500 26px/34px var(--font-sans);letter-spacing:-.02em}
+.ah-bundle__p{margin:var(--space-2) 0 0;color:var(--text-muted);max-width:520px;font-size:14.5px;line-height:22px}
+.ah-diagram{width:100%;height:auto;display:block;overflow:visible}
+.ah-diagram__node{fill:var(--bg)}
+.ah-diagram__node--ink{fill:var(--ink)}
+.ah-diagram__links path{fill:none;stroke:var(--border-strong);stroke-width:1px}
+.ah-diagram__links--dash path{stroke-dasharray:3 4}
+.ah-diagram__flow{fill:none;stroke:var(--success-solid);stroke-width:1.4px;stroke-dasharray:4 14;animation:3.6s linear infinite th-flow}
+@keyframes th-flow{to{stroke-dashoffset:-54px}}
+.ah-diagram__name{fill:var(--text);font:500 12.5px var(--font-sans)}
+.ah-diagram__name--ink{fill:var(--on-ink)}
+.ah-diagram__sub{fill:var(--text-muted);font:400 10.5px var(--font-mono)}
+.ah-diagram__sub--ink{fill:color-mix(in srgb,var(--on-ink) 70%,transparent)}
+
+.ah-singles{display:flex;flex-direction:column;gap:2px}
+.ah-single{
+  flex:1;padding:var(--space-5);background:var(--surface);
+  display:flex;flex-direction:column;justify-content:center;gap:6px;
+  cursor:pointer;border:0;text-align:left;height:auto;align-items:stretch;
+  transition:background-color .15s;
 }
-.step h4{margin:0 0 4px;font-size:.98rem}
-.step p{margin:0;color:var(--dim);font-size:.86rem}
+.ah-single:hover{background:var(--surface-overlay)}
+.ah-single__head{display:flex;justify-content:space-between;align-items:baseline;gap:12px}
+.ah-single__head b{font:500 18px/24px var(--font-sans);letter-spacing:-.01em}
+.ah-single__price{font:500 13.5px/20px var(--font-mono);color:var(--text)}
+.ah-single small{color:var(--text-muted);font-size:13.5px;line-height:20px;white-space:normal}
+.ah-single__meta{display:flex;align-items:center;gap:14px;margin-top:8px;font:400 12px/18px var(--font-mono);color:var(--text-muted)}
+.ah-single__arrow{margin-left:auto;transition:translate .25s var(--ease-out)}
+.ah-single:hover .ah-single__arrow{translate:4px}
 
-/* Dashboard */
-.dash-top{padding:28px 0 12px;display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
-.dash-top h1{margin:0;font-size:1.75rem;letter-spacing:-.02em}
-.summary{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:14px;margin:14px 0 28px}
-.sum-card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px}
-.sum-card small{color:var(--dim);font-size:.8rem;display:block}
-.sum-card b{font-size:1.4rem;display:block;margin-top:4px}
-.bar{height:6px;background:rgba(255,255,255,.08);border-radius:99px;overflow:hidden;margin-top:10px}
-.bar i{display:block;height:100%;background:var(--accent);transition:width .3s ease}
+/* Panel Showcase + List (.ah-panel) */
+.ah-panel{display:grid;grid-template-columns:minmax(0,7fr) minmax(0,5fr);gap:2px}
+.ah-panel__list{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:2px}
+.ah-panel__list li{
+  flex:1;padding:var(--space-4) var(--space-5);background:var(--surface);
+  display:flex;flex-direction:column;justify-content:center;gap:3px;
+}
+.ah-panel__list b{font:500 15px/22px var(--font-sans)}
+.ah-panel__list span{color:var(--text-muted);font-size:13.5px;line-height:20px}
 
-.srv-list{display:grid;gap:14px;margin-bottom:34px}
-.srv-card{
-  background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:18px 20px;
-  border-left:4px solid var(--srv-accent,var(--accent));
+/* FAQ Accordion (.ah-faq) */
+.ah-faq{display:flex;flex-direction:column;gap:2px}
+.ah-faq details{background:var(--surface)}
+.ah-faq summary{
+  display:flex;justify-content:space-between;align-items:center;gap:var(--space-5);
+  padding:var(--space-4) var(--space-5);font:500 15px/24px var(--font-sans);
+  cursor:pointer;list-style:none;
+}
+.ah-faq summary::-webkit-details-marker{display:none}
+.ah-faq summary svg{color:var(--text-muted);transition:transform .3s var(--ease-out),color .15s;flex:none}
+.ah-faq details[open] summary svg{transform:rotate(45deg);color:var(--text)}
+.ah-faq details p{margin:0;padding:0 var(--space-5) var(--space-5);max-width:720px;color:var(--text-muted);font-size:14.5px;line-height:22px}
+
+/* Editorial Footer (im-a.fish style) */
+.foot{
+  margin-top:var(--space-8);padding:var(--space-8) 0 var(--space-5);
+  border-top:1px solid var(--border);background:var(--surface);
+}
+.foot-title{
+  margin:0 0 var(--space-4);
+  font:400 clamp(48px,9vw,132px)/.88 var(--font-display);
+  letter-spacing:.01em;text-transform:uppercase;color:var(--text);
+}
+.foot-title span{color:transparent;-webkit-text-stroke:1.5px #f4efe8e6}
+.foot-row{
+  display:flex;flex-wrap:wrap;justify-content:space-between;align-items:baseline;
+  gap:8px 28px;padding-bottom:18px;font-size:15px;color:var(--text-muted);
+}
+.foot-bottom{
+  border-top:1px solid var(--border);padding-top:16px;
+  display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:8px 16px;
+  font-size:13px;color:var(--text-muted);
+}
+.foot-logo{font:700 18px/1 var(--font-sans);color:var(--text);letter-spacing:-.01em}
+
+/* Authenticated Dashboard Shell (from .ah-shell + .ah-topbar + .ah-sidebar) */
+.ah-shell{
+  --bar:52px;
+  display:grid;grid-template-columns:240px minmax(0,1fr);grid-template-rows:var(--bar) auto;
+  min-height:100vh;
+}
+.ah-topbar{
+  grid-column:1 / -1;position:sticky;top:0;z-index:30;
+  height:var(--bar);display:flex;align-items:center;gap:var(--space-3);
+  padding:0 var(--space-4) 0 var(--space-5);
+  background:var(--bg);border-bottom:1px solid var(--border);
+}
+.ah-topbar__toggle{
+  display:none;width:34px;height:34px;padding:0;background:transparent;border:1px solid transparent;
+}
+.ah-topbar__slash{color:var(--border-strong);font-size:18px}
+.ah-topbar__section{font:500 14px/1 var(--font-sans);color:var(--text-muted)}
+.ah-topbar__end{margin-left:auto;display:flex;align-items:center;gap:8px}
+.ah-sidebar{
+  position:sticky;top:var(--bar);height:calc(100vh - var(--bar));
+  background:var(--surface);border-right:1px solid var(--border);
+  display:flex;flex-direction:column;
+}
+.ah-sidebar__links{flex:1;min-height:0;overflow-y:auto;padding:var(--space-3);display:flex;flex-direction:column;gap:2px}
+.ah-sidebar__label{margin:var(--space-4) var(--space-3) var(--space-1);font:500 11px/16px var(--font-mono);letter-spacing:.08em;text-transform:uppercase;color:var(--text-muted)}
+.ah-sidebar__item{
+  display:flex;align-items:center;gap:10px;height:34px;padding:0 var(--space-3);
+  font:400 13.5px/20px var(--font-sans);color:var(--text-muted);text-decoration:none;
+  background:transparent;border:0;width:100%;justify-content:flex-start;
+  transition:background-color .12s,color .12s;
+}
+.ah-sidebar__item:hover,.ah-sidebar__item.is-active{background:var(--surface-overlay);color:var(--text)}
+.ah-sidebar__item.is-active{font-weight:500}
+.ah-sidebar__sub{margin:2px 0 4px 16px;padding-left:8px;border-left:1px solid var(--border);display:flex;flex-direction:column;gap:2px}
+.ah-sidebar__footer{padding:var(--space-3);border-top:1px solid var(--border);font:400 12px/18px var(--font-mono);color:var(--text-muted);display:flex;justify-content:space-between;align-items:center}
+
+.ah-shell__main{
+  width:100%;min-width:0;max-width:1160px;padding:var(--space-6) var(--space-6) var(--space-8);
+}
+.dash-head{display:flex;justify-content:space-between;align-items:flex-end;gap:16px;flex-wrap:wrap;margin-bottom:var(--space-5)}
+.dash-head h1{margin:0;font:600 24px/32px var(--font-sans);letter-spacing:-.02em}
+.dash-head p{margin:4px 0 0;font-size:13.5px;color:var(--text-muted)}
+
+/* Quota Strip (2px tile grid) */
+.quota-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:2px;margin-bottom:var(--space-5)}
+.q-tile{background:var(--surface);padding:16px 18px}
+.q-tile small{display:block;font:500 11px/16px var(--font-mono);letter-spacing:.06em;text-transform:uppercase;color:var(--text-muted)}
+.q-tile b{display:block;font:500 22px/28px var(--font-mono);margin-top:4px;font-variant-numeric:tabular-nums}
+.q-meter{height:4px;background:var(--surface-overlay);margin-top:10px}
+.q-meter i{display:block;height:100%;background:var(--text);transition:width .25s}
+
+/* Server Rows (2px gap tiles) */
+.srv-list{display:flex;flex-direction:column;gap:2px;margin-bottom:var(--space-6)}
+.srv-row{
+  background:var(--surface);padding:18px 20px;
   display:grid;grid-template-columns:1fr auto;gap:16px;align-items:center;
+  transition:background-color .15s;
 }
+.srv-row:hover{background:var(--surface-raised)}
 .srv-title{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
-.srv-title b{font-size:1.12rem}
-.srv-motd{color:var(--dim);font-size:.88rem;margin:4px 0 10px}
-.srv-meta{display:flex;gap:14px;flex-wrap:wrap;font-size:.82rem;color:var(--dim);margin-bottom:10px}
-.srv-url-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.srv-title b{font:500 16px/24px var(--font-sans)}
+.srv-motd{color:var(--text-muted);font-size:13.5px;margin:2px 0 10px}
+.srv-meta{display:flex;gap:14px;flex-wrap:wrap;font:400 12px/18px var(--font-mono);color:var(--text-muted);margin-bottom:10px}
+.srv-url-row{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
 .srv-url{
-  font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.82rem;
-  background:var(--bg);border:1px solid var(--line);border-radius:7px;padding:5px 10px;color:var(--accent-2);
-  text-decoration:none;
+  font:400 12px/1 var(--font-mono);background:var(--bg);border:1px solid var(--border);
+  padding:7px 10px;color:var(--blue);text-decoration:none;
 }
-.srv-url:hover{border-color:var(--accent-2)}
-.srv-actions{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+.srv-url:hover{border-color:var(--blue)}
+.srv-actions{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+.status-badge{
+  display:inline-flex;align-items:center;gap:6px;padding:3px 8px;
+  font:500 11px/1 var(--font-mono);text-transform:uppercase;
+}
+.s-running{background:var(--success-subtle);color:var(--success)}
+.s-provisioning,.s-deleting{background:var(--warning-subtle);color:var(--warning)}
+.s-stopped{background:var(--surface-overlay);color:var(--text-muted)}
+.s-failed{background:var(--danger-subtle);color:var(--danger)}
+.srv-err{color:var(--danger);font:400 12px/18px var(--font-mono);margin-top:8px}
 
-.badge{
-  display:inline-flex;align-items:center;gap:6px;
-  font-size:.76rem;padding:3px 10px;border-radius:99px;font-weight:700;text-transform:uppercase;letter-spacing:.03em;
+/* Provision Builder (.ah-form-section style) */
+.builder{
+  background:var(--surface);padding:var(--space-5);margin-bottom:var(--space-6);
 }
-.badge i{width:7px;height:7px;border-radius:50%;background:currentColor}
-.s-running{background:rgba(94,224,98,.14);color:var(--accent);border:1px solid rgba(94,224,98,.3)}
-.s-provisioning,.s-deleting{background:rgba(245,158,11,.15);color:var(--warn);border:1px solid rgba(245,158,11,.35)}
-.s-stopped{background:rgba(148,163,184,.14);color:var(--dim);border:1px solid rgba(148,163,184,.3)}
-.s-failed{background:rgba(251,113,133,.15);color:var(--err);border:1px solid rgba(251,113,133,.35)}
-.srv-err{color:var(--err);font-size:.84rem;margin-top:6px}
-
-/* Create Panel */
-.create-panel{
-  background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:24px;margin-bottom:44px;
-}
-.create-panel h2{margin:0 0 6px;font-size:1.3rem}
-.create-panel .sub{color:var(--dim);font-size:.9rem;margin-bottom:18px}
-.pick-label{display:block;font-size:.84rem;font-weight:600;color:var(--dim);margin:16px 0 8px}
-.pick-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:10px}
+.builder h2{margin:0 0 4px;font:500 16px/24px var(--font-sans)}
+.builder .sub{color:var(--text-muted);font-size:13px;margin-bottom:16px}
+.field-lbl{display:block;font:500 11px/16px var(--font-mono);text-transform:uppercase;letter-spacing:.08em;color:var(--text-muted);margin:16px 0 8px}
+.pick-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:2px}
 .pick-card{
-  text-align:left;padding:12px 14px;border-radius:11px;
-  background:var(--bg-soft);border:1px solid var(--line);
-  display:flex;flex-direction:column;gap:4px;
+  display:flex;flex-direction:column;align-items:flex-start;justify-content:center;gap:3px;
+  height:auto;padding:12px 14px;background:var(--bg);border:1px solid var(--border);text-align:left;
 }
-.pick-card.active{
-  border-color:var(--accent);background:rgba(94,224,98,.08);
-  box-shadow:0 0 0 1px rgba(94,224,98,.35) inset;
-}
-.pick-card strong{font-size:.95rem}
-.pick-card span{font-size:.8rem;color:var(--dim)}
-.form-row{display:grid;grid-template-columns:1fr 1fr auto;gap:12px;margin-top:16px;align-items:end}
-label.field{display:block;font-size:.84rem;color:var(--dim)}
-label.field span{display:block;margin-bottom:5px;font-weight:600}
+.pick-card.active{background:var(--surface-overlay);border-color:var(--ink)}
+.pick-card strong{font:500 13.5px/18px var(--font-sans);color:var(--text)}
+.pick-card span{font:400 12px/16px var(--font-mono);color:var(--text-muted)}
+.form-row{display:grid;grid-template-columns:1fr 1fr auto;gap:10px;margin-top:14px;align-items:end}
+label.field{display:block;font:500 12px/16px var(--font-sans);color:var(--text-muted)}
+label.field span{display:block;margin-bottom:6px}
 input,select{
-  font:inherit;background:var(--bg);color:var(--fg);
-  border:1px solid var(--line);border-radius:9px;padding:10px 12px;width:100%;
+  font:400 14px/20px var(--font-sans);background:var(--bg);color:var(--text);
+  border:1px solid var(--border);border-radius:0;padding:8px 10px;width:100%;height:38px;
 }
-.msg{color:var(--err);min-height:1.3em;margin-top:10px;font-size:.9rem}
+.hpa-row{
+  display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-top:12px;
+  padding:10px 12px;background:var(--bg);border:1px solid var(--border);
+}
+.msg{color:var(--danger);min-height:1.2em;margin-top:8px;font-size:13px}
 
 /* Dialogs */
 dialog{
-  background:var(--panel);color:var(--fg);border:1px solid var(--line);
-  border-radius:16px;padding:24px;width:min(440px,94vw);
-  box-shadow:0 28px 80px rgba(0,0,0,.75);
+  background:var(--surface);color:var(--text);border:1px solid var(--border);
+  border-radius:0;padding:0;width:min(440px,94vw);box-shadow:var(--shadow-dialog);
 }
-dialog.wide{width:min(620px,95vw)}
-dialog::backdrop{background:rgba(5,8,14,.75);backdrop-filter:blur(4px)}
-dialog h3{margin:0 0 6px;font-size:1.25rem}
-dialog label{display:block;margin:12px 0 5px;color:var(--dim);font-size:.86rem;font-weight:600}
-.dlg-actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:16px;align-items:center}
-.events-list{
-  background:var(--bg);border:1px solid var(--line);border-radius:10px;
-  padding:10px 12px;max-height:200px;overflow:auto;display:grid;gap:8px;margin-top:10px;
+dialog.wide{width:min(660px,95vw)}
+dialog::backdrop{background:var(--scrim);-webkit-backdrop-filter:blur(3px);backdrop-filter:blur(3px)}
+.dlg-head{
+  display:flex;justify-content:space-between;align-items:center;gap:12px;
+  padding:14px 18px;background:var(--bg);border-bottom:1px solid var(--border);
 }
-.ev-item{font-size:.83rem;border-bottom:1px solid rgba(255,255,255,.05);padding-bottom:6px}
+.dlg-head h3{margin:0;font:500 15px/22px var(--font-sans)}
+.dlg-body{padding:18px}
+dialog label{display:block;margin:12px 0 4px;color:var(--text-muted);font-size:12px;font-weight:500}
+.dlg-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:16px;align-items:center}
+.log-box{
+  background:var(--bg);border:1px solid var(--border);
+  padding:12px;max-height:220px;overflow:auto;display:grid;gap:6px;margin-top:8px;
+}
+.ev-item{font-size:13px;border-bottom:1px solid var(--border);padding-bottom:6px}
 .ev-item:last-child{border-bottom:0;padding-bottom:0}
-.ev-time{color:var(--dim);font-size:.75rem;margin-right:8px}
-.ev-type{color:var(--accent-2);font-weight:700;text-transform:uppercase;font-size:.73rem;margin-right:6px}
+.ev-time{font:400 11.5px/1 var(--font-mono);color:var(--text-muted);margin-right:8px}
+.ev-type{font:500 11px/1 var(--font-mono);color:var(--blue);text-transform:uppercase;margin-right:6px}
 
 /* Toasts */
-#toasts{
-  position:fixed;right:20px;bottom:20px;z-index:50;
-  display:grid;gap:8px;width:min(340px,calc(100vw - 40px));
-}
+#toasts{position:fixed;right:16px;bottom:16px;z-index:60;display:grid;gap:4px;width:min(340px,calc(100vw - 32px))}
 .toast{
-  background:var(--panel-2);border:1px solid var(--line-bright);border-left:4px solid var(--accent);
-  color:var(--fg);padding:11px 14px;border-radius:10px;font-size:.88rem;
-  box-shadow:0 12px 32px rgba(0,0,0,.5);animation:slideIn .18s ease-out;
+  background:var(--ink);color:var(--on-ink);padding:10px 14px;
+  font:500 13px/18px var(--font-sans);border-left:3px solid var(--success-solid);
 }
-.toast.err{border-left-color:var(--err)}
-@keyframes slideIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+.toast.err{background:var(--danger-solid);color:#fff;border-left-color:#fff}
 
-footer{
-  color:var(--dim);font-size:.84rem;padding:28px 24px;
-  border-top:1px solid var(--line);margin-top:48px;text-align:center;
+@media(max-width:960px){
+  .fk-hero__grid,.ah-products,.ah-panel{grid-template-columns:1fr}
+  .ah-offers{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .ah-shell{grid-template-columns:1fr}
+  .ah-topbar__toggle{display:inline-flex}
+  .ah-sidebar{position:fixed;left:0;top:52px;bottom:0;width:260px;z-index:45;transform:translateX(-100%);transition:transform .2s var(--ease-out)}
+  .ah-sidebar.is-open{transform:none}
+  .ah-shell__main{padding:var(--space-5) var(--space-4) var(--space-7)}
 }
-@media(max-width:860px){
-  .hero{grid-template-columns:1fr;padding:34px 0 24px}
-  .form-row{grid-template-columns:1fr}
-  .srv-card{grid-template-columns:1fr}
+@media(max-width:640px){
+  .ah-container{padding:0 var(--space-4)}
+  .ah-nav{display:none}
+  .ah-offers,.quota-grid{grid-template-columns:1fr}
+  .form-row,.srv-row{grid-template-columns:1fr}
   .srv-actions{justify-content:flex-start}
-}
-@media(prefers-reduced-motion:no-preference){
-  .badge.s-provisioning,.badge.s-deleting{animation:pulse 1.4s infinite}
-  @keyframes pulse{50%{opacity:.5}}
 }
 </style>
 </head>
 <body>
-<header>
-  <div class="head-inner">
-    <a class="logo" href="#">
-      <span class="logo-mark">FK</span>
-      <span>Free<b>Kube</b></span>
-    </a>
-    <nav id="nav"></nav>
-  </div>
-</header>
 
-<main class="wrap">
-  <!-- LANDING -->
-  <div id="landing">
-    <section class="hero">
-      <div>
-        <div class="eyebrow"><span class="pulse"></span>OpenShift Native &bull; Stateless &amp; Auto-Scaling</div>
-        <h1>Instant game servers.<br><span class="grad">Zero credit card.</span></h1>
-        <p>Launch a dedicated Minecraft, Satisfactory, Valheim, or Terraria server in seconds. Each server gets its own Kubernetes Pod, Service, and TLS Route — free for 24 hours and renewable with one click.</p>
-        <div class="hero-actions">
-          <button class="primary" id="cta">Deploy Free Server</button>
-          <button id="btn-demo">Try Instant Demo</button>
-          <button class="ghost" onclick="document.getElementById('games-sec').scrollIntoView()">Browse Catalog</button>
-        </div>
-      </div>
+<!-- PUBLIC LANDING & SHARE SHELL -->
+<div id="public-shell">
+  <header class="ah-header">
+    <div class="ah-container ah-header__inner">
+      <a class="as-logo" href="#">
+        <svg width="22" height="18" viewBox="-3.5 -1.5 57 43" fill="none" aria-hidden="true">
+          <circle cx="6" cy="32" r="3.5" fill="currentColor"></circle>
+          <path d="M14 8L28 32" stroke="currentColor" stroke-width="7" stroke-linecap="round"></path>
+          <path d="M30 8L44 32" stroke="currentColor" stroke-width="7" stroke-linecap="round"></path>
+        </svg>
+        FreeKube <span>OpenShift</span>
+      </a>
+      <nav class="ah-nav" aria-label="Main">
+        <a href="#games-sec">Games</a>
+        <a href="#arch-sec">Architecture</a>
+        <a href="#faq-sec">FAQ</a>
+      </nav>
+      <div class="ah-header__actions" id="pub-actions"></div>
+    </div>
+  </header>
 
-      <div class="telemetry">
-        <div class="tel-head">
-          <span>Live Cluster Telemetry</span>
-          <span style="color:var(--accent)">&bull; Online</span>
-        </div>
-        <div class="tel-grid">
-          <div class="tel-box"><small>Players</small><b id="st-users">-</b></div>
-          <div class="tel-box"><small>Running</small><b id="st-running">-</b></div>
-          <div class="tel-box"><small>Provisioned</small><b id="st-total">-</b></div>
-        </div>
-        <div class="pipeline">
-          <span class="pipe-node">Flask API</span><span>&rarr;</span>
-          <span class="pipe-node">Redis Queue</span><span>&rarr;</span>
-          <span class="pipe-node">K8s Worker</span><span>&rarr;</span>
-          <span class="pipe-node">Pod + TLS Route</span>
-        </div>
-        <div class="by-game" id="st-by-game"></div>
+  <main>
+    <!-- PUBLIC SHARE VIEW -->
+    <section id="public-view" class="hidden" style="padding:var(--space-7) 0">
+      <div class="ah-container">
+        <div class="srv-row" id="public-card" style="max-width:680px;margin:0 auto;grid-template-columns:1fr">Loading shared instance...</div>
       </div>
     </section>
 
-    <div class="sec-head" id="games-sec">
-      <div>
-        <h2>Supported Games</h2>
-        <p>Pick a title to spin up an isolated pod with a live status console.</p>
-      </div>
-    </div>
-    <div class="grid" id="games"></div>
+    <!-- LANDING -->
+    <div id="landing">
+      <section class="fk-hero">
+        <div class="ah-container fk-hero__grid">
+          <div>
+            <p class="ah-overline">OpenShift Testbed &middot; Stateless Orchestration</p>
+            <h1>Free game<br><span class="stroke">servers.</span></h1>
+            <p class="fk-hero__facts">
+              <span>24h renewable lease</span>
+              <span>Dedicated TLS route</span>
+              <span>HPA autoscaling</span>
+              <span>Zero cost</span>
+            </p>
+            <div class="fk-hero__actions">
+              <button class="primary lg" id="cta">Deploy free server &rarr;</button>
+              <button class="lg" id="btn-demo">Launch instant demo</button>
+              <button class="fk-hero__link" onclick="document.getElementById('games-sec').scrollIntoView()">All games</button>
+            </div>
+          </div>
 
-    <div class="sec-head">
-      <div>
-        <h2>Free Tier Plans</h2>
-        <p>Every plan is 100% free and renewable every 24 hours.</p>
-      </div>
-    </div>
-    <div class="grid" id="plans"></div>
-
-    <div class="sec-head">
-      <div>
-        <h2>How It Works</h2>
-        <p>Real Kubernetes orchestration under the hood.</p>
-      </div>
-    </div>
-    <div class="steps">
-      <div class="step"><div class="step-num">1</div><h4>Choose Game &amp; Plan</h4><p>Select your game, resource tier, and custom MOTD in the dashboard.</p></div>
-      <div class="step"><div class="step-num">2</div><h4>Queue &amp; Provision</h4><p>The API stores state in Postgres and dispatches a job through Redis.</p></div>
-      <div class="step"><div class="step-num">3</div><h4>Live Pod &amp; Route</h4><p>A stateless worker creates a Deployment, Service, and TLS Route.</p></div>
-      <div class="step"><div class="step-num">4</div><h4>Manage &amp; Renew</h4><p>Monitor status, trigger rolling restarts, edit MOTD, or renew 24h anytime.</p></div>
-    </div>
-  </div>
-
-  <!-- PUBLIC SHARE VIEW -->
-  <section id="public-view" class="hidden" style="padding:48px 0">
-    <div class="card" id="public-card" style="max-width:640px;margin:0 auto">Loading shared server...</div>
-  </section>
-
-  <!-- DASHBOARD -->
-  <section id="dash" class="hidden">
-    <div class="dash-top">
-      <div>
-        <h1>Server Dashboard</h1>
-        <div style="color:var(--dim);font-size:.9rem" id="dash-sub">Loading your cluster resources...</div>
-      </div>
-      <div style="display:flex;gap:8px;align-items:center">
-        <button class="sm" id="btn-refresh">Refresh</button>
-        <button class="primary sm" onclick="document.getElementById('create-panel').scrollIntoView()">+ New Server</button>
-      </div>
-    </div>
-
-    <div class="summary" id="summary"></div>
-    <div class="srv-list" id="servers"></div>
-
-    <div class="create-panel" id="create-panel">
-      <h2>Deploy a New Server</h2>
-      <div class="sub">Provisioned asynchronously by the OpenShift worker in a few seconds.</div>
-      <form id="create-form">
-        <span class="pick-label">Quick Presets (optional)</span>
-        <div class="tags" id="pick-presets" style="margin-bottom:6px"></div>
-
-        <span class="pick-label">1. Select Game</span>
-        <div class="pick-grid" id="pick-games"></div>
-
-        <span class="pick-label">2. Select Plan</span>
-        <div class="pick-grid" id="pick-plans"></div>
-
-        <div class="form-row">
-          <label class="field">
-            <span>3. Server Name</span>
-            <input name="name" id="c-name" placeholder="e.g. Survival Realm" required minlength="3" maxlength="32" pattern="[A-Za-z0-9 _\-]{3,32}">
-          </label>
-          <label class="field">
-            <span>MOTD (optional)</span>
-            <input name="motd" id="c-motd" placeholder="Welcome to the server!" maxlength="120">
-          </label>
-          <button class="primary" type="submit" id="c-submit">Deploy Server</button>
-        </div>
-        <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-top:14px;padding:12px 14px;border-radius:10px;background:var(--bg-soft);border:1px solid var(--line)">
-          <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:.88rem;font-weight:600">
-            <input type="checkbox" id="c-autoscale" style="width:auto;accent-color:var(--accent)">
-            Enable Kubernetes HPA Autoscaling (60% CPU)
-          </label>
-          <div id="c-scale-opts" class="hidden" style="display:flex;align-items:center;gap:8px;font-size:.84rem;color:var(--dim)">
-            <span>Min pods:</span>
-            <select id="c-min" style="width:auto;padding:5px 8px"><option value="1">1</option><option value="2">2</option></select>
-            <span>Max pods:</span>
-            <select id="c-max" style="width:auto;padding:5px 8px"><option value="2">2</option><option value="3" selected>3</option><option value="4">4</option><option value="5">5</option></select>
+          <div class="ah-panel__still">
+            <div class="ah-panel__head">
+              <div>
+                <b>cluster://freekube</b>
+                <small>OpenShift namespace &middot; live telemetry</small>
+              </div>
+              <span class="ah-panel__state"><i class="dot dot--ok"></i>online</span>
+            </div>
+            <div class="ah-panel__stats">
+              <div class="ah-panel__stat"><small>Users</small><b id="st-users">-</b></div>
+              <div class="ah-panel__stat"><small>Running</small><b id="st-running">-</b></div>
+              <div class="ah-panel__stat"><small>Total</small><b id="st-total">-</b></div>
+            </div>
+            <div class="ah-panel__console">
+              <p><span>[worker]</span> watching redis://jobs &amp; deployment readiness</p>
+              <p><span>[route]</span> tls edge termination active per gs-xxxx pod</p>
+              <p class="ah-panel__input"><span>$</span> oc get pods -l hoster-role=gameserver <b>_</b></p>
+              <div class="by-game" id="st-by-game"></div>
+            </div>
           </div>
         </div>
-        <div class="msg" id="create-msg" role="alert"></div>
-      </form>
-    </div>
-  </section>
-</main>
+      </section>
 
-<footer>
-  FreeKube &mdash; OpenShift &amp; GitOps demo project. Simulated game servers run as stateless pods with live telemetry.
-</footer>
+      <div class="ah-container">
+        <div class="ah-techrow">
+          <p>Built on</p>
+          <ul>
+            <li><span class="ah-tech"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M12 3v18M3 12h18"/></svg>OpenShift</span></li>
+            <li><span class="ah-tech"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 6h16M4 12h16M4 18h10"/></svg>Flask API</span></li>
+            <li><span class="ah-tech"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 2l8 4.5v11L12 22l-8-4.5v-11L12 2z"/></svg>Redis Queue</span></li>
+            <li><span class="ah-tech"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><ellipse cx="12" cy="5" rx="8" ry="3"/><path d="M4 5v14c0 1.66 3.58 3 8 3s8-1.34 8-3V5"/></svg>PostgreSQL</span></li>
+            <li><span class="ah-tech"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="4" width="18" height="16"/><path d="M3 10h18"/></svg>Nginx Cache</span></li>
+            <li><span class="ah-tech"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3v18m-7-7 7 7 7-7"/></svg>ArgoCD GitOps</span></li>
+          </ul>
+        </div>
+      </div>
+
+      <section class="ah-sec" id="games-sec">
+        <div class="ah-container">
+          <div class="ah-sec__head">
+            <div>
+              <p class="ah-overline">Catalog</p>
+              <h2>Supported titles</h2>
+            </div>
+            <p class="ah-sec__sub">Click any game to register or launch an instant demo with that title pre-selected.</p>
+          </div>
+          <div class="ah-offers" id="games"></div>
+        </div>
+      </section>
+
+      <section class="ah-sec" id="arch-sec">
+        <div class="ah-container">
+          <div class="ah-sec__head">
+            <div>
+              <p class="ah-overline">Architecture &amp; Tiers</p>
+              <h2>Stateless by design</h2>
+            </div>
+            <p class="ah-sec__sub">API, worker, frontend, and game pods hold zero local state and scale independently.</p>
+          </div>
+
+          <div class="ah-products">
+            <div class="ah-bundle">
+              <div>
+                <p class="ah-overline">Kubernetes Control Plane</p>
+                <h3>Asynchronous Pod Provisioning</h3>
+                <p class="ah-bundle__p">Requests are written to Postgres and dispatched over Redis. Worker pods reconcile Deployments, Services, TLS Routes, and HPAs via the cluster API.</p>
+              </div>
+              <svg class="ah-diagram" viewBox="0 0 560 210" aria-hidden="true">
+                <g class="ah-diagram__links">
+                  <path d="M120 65 H185"/>
+                  <path d="M305 65 H370"/>
+                  <path d="M430 95 V135"/>
+                </g>
+                <g class="ah-diagram__links ah-diagram__links--dash">
+                  <path d="M245 95 V135"/>
+                  <path d="M305 165 H370"/>
+                </g>
+                <path class="ah-diagram__flow" d="M120 65 H370"/>
+                <g transform="translate(10,35)">
+                  <rect class="ah-diagram__node" width="110" height="60" stroke="#262626"/>
+                  <text class="ah-diagram__name" x="12" y="26">frontend</text>
+                  <text class="ah-diagram__sub" x="12" y="44">nginx + cache</text>
+                </g>
+                <g transform="translate(185,35)">
+                  <rect class="ah-diagram__node ah-diagram__node--ink" width="120" height="60"/>
+                  <text class="ah-diagram__name ah-diagram__name--ink" x="12" y="26">api (flask)</text>
+                  <text class="ah-diagram__sub ah-diagram__sub--ink" x="12" y="44">2-6 pods HPA</text>
+                </g>
+                <g transform="translate(370,35)">
+                  <rect class="ah-diagram__node" width="170" height="60" stroke="#262626"/>
+                  <text class="ah-diagram__name" x="12" y="26">worker (rbac)</text>
+                  <text class="ah-diagram__sub" x="12" y="44">deploy + route + hpa</text>
+                </g>
+                <g transform="translate(185,135)">
+                  <rect class="ah-diagram__node" width="120" height="60" stroke="#262626"/>
+                  <text class="ah-diagram__name" x="12" y="26">postgres</text>
+                  <text class="ah-diagram__sub" x="12" y="44">statefulset pvc</text>
+                </g>
+                <g transform="translate(370,135)">
+                  <rect class="ah-diagram__node" width="170" height="60" stroke="#262626"/>
+                  <text class="ah-diagram__name" x="12" y="26">gs-xxxx pods</text>
+                  <text class="ah-diagram__sub" x="12" y="44">live tls console</text>
+                </g>
+              </svg>
+            </div>
+            <div class="ah-singles" id="plans"></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="ah-sec">
+        <div class="ah-container">
+          <div class="ah-sec__head">
+            <div>
+              <p class="ah-overline">Instance Console</p>
+              <h2>Real controls, live pods</h2>
+            </div>
+            <p class="ah-sec__sub">Every provisioned server exposes a live status console and RCON command prompt.</p>
+          </div>
+
+          <div class="ah-panel">
+            <div class="ah-panel__still">
+              <div class="ah-panel__head">
+                <div>
+                  <b>survival-realm.apps.cluster</b>
+                  <small>Minecraft 1.21.4 &middot; gs-8f41c02a</small>
+                </div>
+                <span class="ah-panel__state"><i class="dot dot--ok"></i>running</span>
+              </div>
+              <div class="ah-panel__tabs">
+                <button type="button" class="is-on" data-preview-tab="console">Console</button>
+                <button type="button" data-preview-tab="hpa">HPA Scaling</button>
+                <button type="button" data-preview-tab="logs">Pod Logs</button>
+              </div>
+              <div class="ah-panel__console" id="preview-console">
+                <p><span>[11:42:08]</span> [Server thread/INFO]: Preparing spawn area: 100%</p>
+                <p><span>[11:42:10]</span> [Server thread/INFO]: Done (2.14s)! Listening on :25565</p>
+                <p><span>[11:42:19]</span> [User Authenticator/INFO]: Alex joined the game</p>
+                <p class="ah-panel__input"><span>&gt;</span> /say Welcome to FreeKube <b>_</b></p>
+              </div>
+              <div class="ah-panel__load">
+                <span>CPU 24% <i style="--v:24%"></i></span>
+                <span>RAM 1.1 / 2.0 GB <i style="--v:55%"></i></span>
+                <span>TPS 20.0 <i style="--v:98%"></i></span>
+              </div>
+            </div>
+            <ul class="ah-panel__list">
+              <li><b>Kubernetes HPA Autoscaling</b><span>Enable per-server horizontal pod autoscaling (1–5 pods) and trigger a CPU load spike directly from the console.</span></li>
+              <li><b>Start, Stop &amp; Rolling Restarts</b><span>Scale idle servers down to 0 pods to save quota, upgrade plans, or trigger a rolling pod restart anytime.</span></li>
+              <li><b>Pod Logs &amp; Audit Trail</b><span>Inspect real Kubernetes pod logs and a Postgres-backed event timeline in the management drawer.</span></li>
+              <li><b>Shareable Public Status</b><span>Generate a read-only link for friends with live pod counts, MOTD, and direct console access.</span></li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <section class="ah-sec" id="faq-sec">
+        <div class="ah-container">
+          <div class="ah-sec__head">
+            <div>
+              <p class="ah-overline">FAQ</p>
+              <h2>How it works</h2>
+            </div>
+          </div>
+          <div class="ah-faq">
+            <details>
+              <summary>Are these real game servers? <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg></summary>
+              <p>They are stateless Python HTTP simulations pretending to be Minecraft, Satisfactory, Valheim, or Terraria servers. Everything around them—Kubernetes Deployments, Services, TLS Routes, HPAs, RBAC, NetworkPolicies, Redis queues, and Postgres—is real OpenShift infrastructure.</p>
+            </details>
+            <details>
+              <summary>What happens when Redis restarts or dies? <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg></summary>
+              <p>Redis runs without persistence on purpose. Active sessions are cleared, and the maintenance CronJob automatically detects stuck provisioning/deleting rows in Postgres and re-enqueues them.</p>
+            </details>
+            <details>
+              <summary>How does per-server autoscaling work? <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg></summary>
+              <p>When HPA is enabled on a server, the worker creates an autoscaling/v2 HorizontalPodAutoscaler targeting 60% CPU utilization. Open the server console and click "Simulate CPU Load" to watch OpenShift scale the deployment up.</p>
+            </details>
+            <details>
+              <summary>Can I try it without registering? <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg></summary>
+              <p>Yes. Click "Launch instant demo" to create a temporary isolated guest account with full access to 2 free server slots.</p>
+            </details>
+          </div>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <footer class="foot">
+    <div class="ah-container">
+      <h2 class="foot-title">Deploy <span>your world.</span></h2>
+      <div class="foot-row">
+        <p style="margin:0">Stateless OpenShift &amp; GitOps testbed — Deployments, StatefulSets, CronJobs, NetworkPolicies &amp; HPA.</p>
+        <a href="#" onclick="window.scrollTo({top:0,behavior:'smooth'});return false" style="text-decoration:none;color:var(--text)">Back to top &uarr;</a>
+      </div>
+      <div class="foot-bottom">
+        <span style="display:flex;align-items:baseline;gap:14px"><strong class="foot-logo">freekube</strong><span>OpenShift Test Project</span></span>
+        <span>Built with Flask, Redis, Postgres &amp; Nginx</span>
+      </div>
+    </div>
+  </footer>
+</div>
+
+<!-- AUTHENTICATED DASHBOARD SHELL (from .ah-shell) -->
+<div id="dash-shell" class="ah-shell hidden">
+  <header class="ah-topbar">
+    <button type="button" class="ah-topbar__toggle" id="side-toggle" aria-label="Toggle navigation">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+    </button>
+    <a class="as-logo" href="#" style="font-size:14px">
+      <svg width="20" height="16" viewBox="-3.5 -1.5 57 43" fill="none" aria-hidden="true">
+        <circle cx="6" cy="32" r="3.5" fill="currentColor"></circle>
+        <path d="M14 8L28 32" stroke="currentColor" stroke-width="7" stroke-linecap="round"></path>
+        <path d="M30 8L44 32" stroke="currentColor" stroke-width="7" stroke-linecap="round"></path>
+      </svg>
+      FreeKube
+    </a>
+    <span class="ah-topbar__slash">/</span>
+    <span class="ah-topbar__section">Console</span>
+    <div class="ah-topbar__end" id="dash-top-actions"></div>
+  </header>
+
+  <aside class="ah-sidebar" id="sidebar">
+    <div class="ah-sidebar__links">
+      <div class="ah-sidebar__label">Workspace</div>
+      <button type="button" class="ah-sidebar__item is-active" onclick="document.getElementById('dash-top').scrollIntoView()">Instances</button>
+      <button type="button" class="ah-sidebar__item" onclick="document.getElementById('create-panel').scrollIntoView()">Provision New</button>
+      <button type="button" class="ah-sidebar__item" id="side-cluster">System Status</button>
+
+      <div class="ah-sidebar__label">Your Pods</div>
+      <div class="ah-sidebar__sub" id="side-servers"></div>
+    </div>
+    <div class="ah-sidebar__footer">
+      <span style="display:inline-flex;align-items:center;gap:6px"><i class="dot dot--ok"></i>OpenShift</span>
+      <span>24h lease</span>
+    </div>
+  </aside>
+
+  <main class="ah-shell__main">
+    <div id="dash">
+      <div class="dash-head" id="dash-top">
+        <div>
+          <h1>Instances</h1>
+          <p id="dash-sub">Loading quota...</p>
+        </div>
+        <div style="display:flex;gap:8px;align-items:center">
+          <button class="sm" id="btn-refresh">Refresh</button>
+          <button class="primary sm" onclick="document.getElementById('create-panel').scrollIntoView()">Provision New</button>
+        </div>
+      </div>
+
+      <div class="quota-grid" id="summary"></div>
+      <div class="srv-list" id="servers"></div>
+
+      <div class="builder" id="create-panel">
+        <h2>Provision New Instance</h2>
+        <div class="sub">Dispatched asynchronously via Redis queue to an OpenShift worker pod.</div>
+        <form id="create-form">
+          <span class="field-lbl">Presets</span>
+          <div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:6px" id="pick-presets"></div>
+
+          <span class="field-lbl">1. Game</span>
+          <div class="pick-grid" id="pick-games"></div>
+
+          <span class="field-lbl">2. Instance Tier</span>
+          <div class="pick-grid" id="pick-plans"></div>
+
+          <div class="form-row">
+            <label class="field">
+              <span>3. Instance Name</span>
+              <input name="name" id="c-name" placeholder="e.g. Survival Realm" required minlength="3" maxlength="32" pattern="[A-Za-z0-9 _\-]{3,32}">
+            </label>
+            <label class="field">
+              <span>MOTD (optional)</span>
+              <input name="motd" id="c-motd" placeholder="Welcome to the server!" maxlength="120">
+            </label>
+            <button class="primary" type="submit" id="c-submit">Provision</button>
+          </div>
+
+          <div class="hpa-row">
+            <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;font-weight:500;margin:0">
+              <input type="checkbox" id="c-autoscale" style="width:auto;height:auto">
+              Enable Kubernetes HPA Autoscaling (60% CPU)
+            </label>
+            <div id="c-scale-opts" class="hidden" style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text-muted)">
+              <span>Min pods:</span>
+              <select id="c-min" style="width:auto;height:30px;padding:0 8px"><option value="1">1</option><option value="2">2</option></select>
+              <span>Max pods:</span>
+              <select id="c-max" style="width:auto;height:30px;padding:0 8px"><option value="2">2</option><option value="3" selected>3</option><option value="4">4</option><option value="5">5</option></select>
+            </div>
+          </div>
+          <div class="msg" id="create-msg" role="alert"></div>
+        </form>
+      </div>
+    </div>
+  </main>
+</div>
 
 <!-- AUTH DIALOG -->
 <dialog id="auth">
-  <form method="dialog" id="auth-form">
-    <h3 id="auth-title">Log in</h3>
-    <div style="color:var(--dim);font-size:.88rem;margin-bottom:8px" id="auth-sub">Access your free game servers.</div>
-    <label for="a-email">Email</label>
-    <input id="a-email" type="email" required autocomplete="email" placeholder="you@example.com">
-    <label for="a-pw">Password</label>
-    <input id="a-pw" type="password" required minlength="8" autocomplete="current-password" placeholder="Minimum 8 characters">
-    <div class="msg" id="auth-msg" role="alert"></div>
-    <div class="dlg-actions">
-      <button class="primary" type="submit" id="auth-submit">Log in</button>
-      <button type="button" id="auth-demo">Instant Demo</button>
-      <button type="button" id="auth-cancel">Cancel</button>
-      <button type="button" id="auth-switch" class="link"></button>
-    </div>
-  </form>
+  <div class="dlg-head">
+    <h3 id="auth-title">Sign in</h3>
+    <button type="button" class="sm ghost" id="auth-cancel">Close</button>
+  </div>
+  <div class="dlg-body">
+    <form method="dialog" id="auth-form">
+      <div style="color:var(--text-muted);font-size:13px;margin-bottom:8px" id="auth-sub">Access your free game servers.</div>
+      <label for="a-email">Email</label>
+      <input id="a-email" type="email" required autocomplete="email" placeholder="you@example.com">
+      <label for="a-pw">Password</label>
+      <input id="a-pw" type="password" required minlength="8" autocomplete="current-password" placeholder="Minimum 8 characters">
+      <div class="msg" id="auth-msg" role="alert"></div>
+      <div class="dlg-actions">
+        <button class="primary" type="submit" id="auth-submit">Sign in</button>
+        <button type="button" id="auth-demo">Instant Demo</button>
+        <button type="button" id="auth-switch" class="link" style="margin-left:auto"></button>
+      </div>
+    </form>
+  </div>
 </dialog>
 
 <!-- MANAGE SERVER DIALOG -->
 <dialog id="manage-dlg" class="wide">
-  <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px">
+  <div class="dlg-head">
     <div>
-      <h3 id="m-title">Manage Server</h3>
-      <div style="color:var(--dim);font-size:.85rem" id="m-sub"></div>
+      <h3 id="m-title">Manage Instance</h3>
+      <div class="mono" style="color:var(--text-muted);font-size:11.5px;margin-top:2px" id="m-sub"></div>
     </div>
     <button type="button" class="sm" id="m-close">Close</button>
   </div>
+  <div class="dlg-body">
+    <form id="manage-form">
+      <div style="display:grid;grid-template-columns:1.4fr 1fr;gap:10px">
+        <div>
+          <label for="m-name" style="margin-top:0">Instance Name</label>
+          <input id="m-name" required minlength="3" maxlength="32" pattern="[A-Za-z0-9 _\-]{3,32}">
+        </div>
+        <div>
+          <label for="m-plan" style="margin-top:0">Instance Tier</label>
+          <select id="m-plan"></select>
+        </div>
+      </div>
+      <label for="m-motd">Message of the Day (MOTD)</label>
+      <input id="m-motd" maxlength="120">
+      <div class="hpa-row">
+        <label style="display:flex;align-items:center;gap:8px;margin:0;cursor:pointer;color:var(--text)">
+          <input type="checkbox" id="m-autoscale" style="width:auto;height:auto">
+          Kubernetes HPA Autoscaling
+        </label>
+        <div id="m-scale-opts" style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text-muted)">
+          <span>Min:</span>
+          <select id="m-min" style="width:auto;height:30px;padding:0 8px"><option value="1">1</option><option value="2">2</option></select>
+          <span>Max:</span>
+          <select id="m-max" style="width:auto;height:30px;padding:0 8px"><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option></select>
+        </div>
+      </div>
+      <div class="dlg-actions">
+        <button type="submit" class="primary sm">Save &amp; Apply</button>
+        <button type="button" class="sm" id="m-power">Stop</button>
+        <button type="button" class="sm" id="m-restart">Restart Pod</button>
+        <button type="button" class="sm" id="m-renew">Renew 24h</button>
+        <button type="button" class="danger sm" id="m-delete" style="margin-left:auto">Delete</button>
+      </div>
+    </form>
 
-  <form id="manage-form">
-    <div style="display:grid;grid-template-columns:1.4fr 1fr;gap:12px">
-      <div>
-        <label for="m-name">Server Name</label>
-        <input id="m-name" required minlength="3" maxlength="32" pattern="[A-Za-z0-9 _\-]{3,32}">
-      </div>
-      <div>
-        <label for="m-plan">Resource Plan</label>
-        <select id="m-plan"></select>
-      </div>
+    <div style="display:flex;gap:6px;align-items:center;margin-top:16px;padding-top:12px;border-top:1px solid var(--border)">
+      <button type="button" class="sm" id="tab-events">Activity Log</button>
+      <button type="button" class="sm ghost" id="tab-logs">Pod Logs</button>
+      <button type="button" class="sm ghost hidden" id="btn-refresh-logs" style="margin-left:auto">Refresh Logs</button>
     </div>
-    <label for="m-motd">Message of the Day (MOTD)</label>
-    <input id="m-motd" maxlength="120">
-    <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-top:14px;padding:10px 12px;border-radius:10px;background:var(--bg);border:1px solid var(--line)">
-      <label style="display:flex;align-items:center;gap:8px;margin:0;cursor:pointer;color:var(--fg)">
-        <input type="checkbox" id="m-autoscale" style="width:auto;accent-color:var(--accent)">
-        Kubernetes HPA Autoscaling
-      </label>
-      <div id="m-scale-opts" style="display:flex;align-items:center;gap:8px;font-size:.82rem;color:var(--dim)">
-        <span>Min:</span>
-        <select id="m-min" style="width:auto;padding:4px 8px"><option value="1">1</option><option value="2">2</option></select>
-        <span>Max:</span>
-        <select id="m-max" style="width:auto;padding:4px 8px"><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option></select>
-      </div>
-    </div>
-    <div class="dlg-actions">
-      <button type="submit" class="primary sm">Save &amp; Apply</button>
-      <button type="button" class="sm" id="m-power">Stop Server</button>
-      <button type="button" class="sm" id="m-restart">Rolling Restart</button>
-      <button type="button" class="sm" id="m-renew">Renew 24h</button>
-      <button type="button" class="danger sm" id="m-delete" style="margin-left:auto">Delete Server</button>
-    </div>
-  </form>
-
-  <div style="display:flex;gap:8px;align-items:center;margin-top:18px">
-    <button type="button" class="sm" id="tab-events">Activity Log</button>
-    <button type="button" class="sm ghost" id="tab-logs">Pod Logs</button>
-    <button type="button" class="sm ghost hidden" id="btn-refresh-logs" style="margin-left:auto">Refresh Logs</button>
+    <div class="log-box" id="m-events"><div style="color:var(--text-muted)">Loading events...</div></div>
+    <pre class="log-box hidden mono" id="m-logs" style="margin:8px 0 0;font-size:11.5px;white-space:pre-wrap">Loading pod logs...</pre>
   </div>
-  <div class="events-list" id="m-events"><div style="color:var(--dim)">Loading events...</div></div>
-  <pre class="events-list hidden" id="m-logs" style="margin:10px 0 0;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.78rem;white-space:pre-wrap">Loading pod logs...</pre>
 </dialog>
 
 <!-- CLUSTER STATUS DIALOG -->
 <dialog id="cluster-dlg">
-  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
-    <h3 style="margin:0">Cluster System Status</h3>
+  <div class="dlg-head">
+    <h3>System Status</h3>
     <button type="button" class="sm" onclick="document.getElementById('cluster-dlg').close()">Close</button>
   </div>
-  <div id="cluster-body" style="display:grid;gap:8px;font-size:.9rem">Loading...</div>
+  <div class="dlg-body" id="cluster-body" style="display:grid;gap:10px;font-size:13px">Loading...</div>
 </dialog>
 
 <div id="toasts" aria-live="polite"></div>
@@ -524,12 +904,31 @@ let me = null, catalog = null, mode = 'login', timer = null;
 let selectedGame = 'minecraft', selectedPlan = 'starter';
 let serversCache = [], managingId = null, deleteConfirm = false;
 
-const ICONS = {
-  minecraft: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#5ee062" stroke-width="2"><path d="M12 2l9 5v10l-9 5-9-5V7l9-5z"/><path d="M12 22V12M21 7l-9 5-9-5"/></svg>`,
-  satisfactory: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>`,
-  valheim: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#38bdf8" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>`,
-  terraria: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#c084fc" stroke-width="2"><path d="M12 22v-8m0 0c-3 0-5-2.5-5-5.5C7 5.5 9.5 3 12 3s5 2.5 5 5.5c0 3-2 5.5-5 5.5z"/></svg>`
+const PREVIEW_TABS = {
+  console: `
+    <p><span>[11:42:08]</span> [Server thread/INFO]: Preparing spawn area: 100%</p>
+    <p><span>[11:42:10]</span> [Server thread/INFO]: Done (2.14s)! Listening on :25565</p>
+    <p><span>[11:42:19]</span> [User Authenticator/INFO]: Alex joined the game</p>
+    <p class="ah-panel__input"><span>&gt;</span> /say Welcome to FreeKube <b>_</b></p>`,
+  hpa: `
+    <p><span>[hpa]</span> target=Deployment/gs-8f41c02a min=1 max=4 cpu=60%</p>
+    <p><span>[load]</span> /stress triggered (20s CPU spike)</p>
+    <p><span>[scale]</span> replicas 1 -&gt; 3 (3/3 pods ready)</p>
+    <p class="ah-panel__input"><span>$</span> oc get hpa gs-8f41c02a <b>_</b></p>`,
+  logs: `
+    <p><span>2026-11-18T11:42:06Z</span> Starting FreeKube simulated pod</p>
+    <p><span>2026-11-18T11:42:07Z</span> Bound HTTP console on 0.0.0.0:8080</p>
+    <p><span>2026-11-18T11:42:11Z</span> Route TLS edge ready</p>
+    <p class="ah-panel__input"><span>$</span> oc logs deploy/gs-8f41c02a <b>_</b></p>`,
 };
+
+document.querySelectorAll('[data-preview-tab]').forEach(btn => {
+  btn.onclick = () => {
+    document.querySelectorAll('[data-preview-tab]').forEach(b => b.classList.remove('is-on'));
+    btn.classList.add('is-on');
+    $('#preview-console').innerHTML = PREVIEW_TABS[btn.dataset.previewTab] || '';
+  };
+});
 
 function toast(text, isErr = false) {
   const el = document.createElement('div');
@@ -560,49 +959,43 @@ function renderPickers() {
   $('#pick-games').innerHTML = catalog.games.map(g => `
     <button type="button" class="pick-card ${g.id === selectedGame ? 'active' : ''}" data-pick-game="${esc(g.id)}">
       <strong>${esc(g.label)}</strong>
-      <span>v${esc(g.version)} &bull; Port ${esc(g.port)}</span>
+      <span>v${esc(g.version)} &middot; :${esc(g.port)}</span>
     </button>`).join('');
   $('#pick-plans').innerHTML = catalog.plans.map(p => `
     <button type="button" class="pick-card ${p.id === selectedPlan ? 'active' : ''}" data-pick-plan="${esc(p.id)}">
-      <strong>${esc(p.label)} &middot; ${p.ram_mb / 1024} GB</strong>
-      <span>${p.slots} slots &bull; ${p.vcpu} vCPU &bull; Free</span>
+      <strong>${esc(p.label)} (${p.ram_mb / 1024} GB)</strong>
+      <span>${p.slots} slots &middot; ${p.vcpu} vCPU</span>
     </button>`).join('');
 }
 
 async function loadCatalog() {
   catalog = await api('/catalog');
-  $('#games').innerHTML = catalog.games.map(g => `
-    <div class="card" style="--card-accent:${esc(g.accent)}">
-      <div class="card-bar"></div>
-      <div class="card-top">
-        <div style="display:flex;align-items:center;gap:10px">
-          <div class="game-icon">${ICONS[g.id] || ''}</div>
-          <div>
-            <h3>${esc(g.label)}</h3>
-            <span style="font-size:.78rem;color:var(--dim)">v${esc(g.version)} &bull; Port ${esc(g.port)}</span>
-          </div>
-        </div>
+  $('#games').innerHTML = catalog.games.map((g, idx) => `
+    <button type="button" class="ah-offer" data-launch-game="${esc(g.id)}">
+      <div class="ah-offer__top">
+        <span class="ah-offer__cat">${esc(g.tags?.[0] || 'Server')}</span>
+        <span class="ah-panel__state"><i class="dot dot--ok"></i>ready</span>
       </div>
-      <p>${esc(g.description)}</p>
-      <div class="tags">${(g.tags || []).map(t => `<span class="tag">${esc(t)}</span>`).join('')}</div>
-      <button type="button" class="sm" data-launch-game="${esc(g.id)}">Launch ${esc(g.label.split(' ')[0])}</button>
-    </div>`).join('');
+      ${idx === 0 ? '<span class="ah-offer__badge">Popular</span>' : ''}
+      <div class="ah-offer__metric">:${esc(g.port)} <small>v${esc(g.version)}</small></div>
+      <div class="ah-offer__name">${esc(g.label)}</div>
+      <div class="ah-offer__desc">${esc(g.description)}</div>
+    </button>`).join('');
 
   $('#plans').innerHTML = catalog.plans.map(p => `
-    <div class="card">
-      <div class="card-top">
-        <h3>${esc(p.label)}</h3>
-        <span class="tag free">FREE</span>
+    <button type="button" class="ah-single" data-launch-plan="${esc(p.id)}">
+      <div class="ah-single__head">
+        <b>${esc(p.label)} Tier</b>
+        <span class="ah-single__price">${p.ram_mb / 1024} GB RAM &middot; Free</span>
       </div>
-      <div style="font-size:1.5rem;font-weight:800;letter-spacing:-.02em">${p.ram_mb / 1024} GB <span style="font-size:.85rem;font-weight:500;color:var(--dim)">RAM</span></div>
-      <p>${esc(p.description)}</p>
-      <div class="tags">
-        <span class="tag">${p.slots} player slots</span>
-        <span class="tag">${p.vcpu} vCPU</span>
-        <span class="tag">${catalog.limits.ttl_hours}h renewable</span>
+      <small>${esc(p.description)}</small>
+      <div class="ah-single__meta">
+        <span>${p.slots} slots</span>
+        <span>${p.vcpu} vCPU</span>
+        <span>24h renewable</span>
+        <span class="ah-single__arrow">&rarr;</span>
       </div>
-      <button type="button" class="sm" data-launch-plan="${esc(p.id)}">Select ${esc(p.label)}</button>
-    </div>`).join('');
+    </button>`).join('');
 
   $('#pick-presets').innerHTML = (catalog.presets || []).map(pr =>
     `<button type="button" class="sm" data-preset="${esc(pr.id)}">${esc(pr.label)}</button>`).join('');
@@ -620,24 +1013,39 @@ async function loadStats() {
     $('#st-total').textContent = s.total_servers ?? s.running;
     const byGame = s.by_game || {};
     $('#st-by-game').innerHTML = Object.keys(byGame).length
-      ? Object.entries(byGame).map(([k, v]) => `<span class="mini-chip">${esc(k)}: <b>${v}</b></span>`).join('')
-      : '<span class="mini-chip">No active pods yet — be the first!</span>';
+      ? Object.entries(byGame).map(([k, v]) => `<span class="chip">${esc(k)}=<b>${v}</b></span>`).join('')
+      : '<span class="chip">0 active game pods</span>';
   } catch (e) {}
 }
 
 function renderNav() {
-  const clusterBtn = `<button id="btn-cluster" class="ghost sm">System Status</button>`;
-  $('#nav').innerHTML = me
-    ? `${clusterBtn}<span class="user-pill"><span class="user-dot"></span>${esc(me.email)}</span><button id="btn-logout" class="sm">Log out</button>`
-    : `${clusterBtn}<button id="btn-login" class="ghost sm">Log in</button><button id="btn-register" class="primary sm">Get a free server</button>`;
   const isShare = location.hash.startsWith('#/s/');
+  const showDash = !!me && !isShare;
+
+  $('#public-shell').classList.toggle('hidden', showDash);
+  $('#dash-shell').classList.toggle('hidden', !showDash);
   $('#public-view').classList.toggle('hidden', !isShare);
-  $('#landing').classList.toggle('hidden', isShare || !!me);
-  $('#dash').classList.toggle('hidden', isShare || !me);
-  if ($('#btn-cluster')) $('#btn-cluster').onclick = openClusterStatus;
+  $('#landing').classList.toggle('hidden', isShare || showDash);
+
+  $('#pub-actions').innerHTML = `
+    <button type="button" id="btn-cluster-pub" class="ghost sm">Status</button>
+    ${me
+      ? `<button type="button" id="btn-go-dash" class="primary sm">Console</button>`
+      : `<button type="button" id="btn-login" class="ghost sm">Log in</button><button type="button" id="btn-register" class="primary sm">Deploy server</button>`}
+  `;
+  $('#dash-top-actions').innerHTML = me ? `
+    <button type="button" id="btn-cluster-dash" class="ghost sm">System Status</button>
+    <span class="mono" style="font-size:12px;color:var(--text-muted)">${esc(me.email)}</span>
+    <button type="button" id="btn-logout" class="sm">Sign out</button>
+  ` : '';
+
+  if ($('#btn-cluster-pub')) $('#btn-cluster-pub').onclick = openClusterStatus;
+  if ($('#btn-cluster-dash')) $('#btn-cluster-dash').onclick = openClusterStatus;
+  if ($('#side-cluster')) $('#side-cluster').onclick = openClusterStatus;
+  if ($('#btn-go-dash')) $('#btn-go-dash').onclick = () => { location.hash = ''; renderNav(); };
   if ($('#btn-logout')) $('#btn-logout').onclick = async () => {
     await api('/logout', 'POST'); me = null; clearTimeout(timer); renderNav(); loadStats();
-    toast('Logged out');
+    toast('Signed out');
   };
   if ($('#btn-login')) $('#btn-login').onclick = () => openAuth('login');
   if ($('#btn-register')) $('#btn-register').onclick = () => openAuth('register');
@@ -645,10 +1053,10 @@ function renderNav() {
 
 function fmtExpiry(iso) {
   const ms = new Date(iso) - Date.now();
-  if (ms <= 0) return {text: 'expiring soon', pct: 0};
+  if (ms <= 0) return {text: 'expiring', pct: 0};
   const h = Math.floor(ms / 3600000), m = Math.floor(ms % 3600000 / 60000);
   const ttlMs = (me?.limits?.ttl_hours || 24) * 3600000;
-  return {text: `${h}h ${m}m left`, pct: Math.min(100, Math.max(4, Math.round(ms * 100 / ttlMs)))};
+  return {text: `${h}h ${m}m`, pct: Math.min(100, Math.max(4, Math.round(ms * 100 / ttlMs)))};
 }
 
 function renderSummary(list) {
@@ -658,21 +1066,26 @@ function renderSummary(list) {
     return acc + (p ? p.ram_mb : 0);
   }, 0);
   const runningCount = list.filter(s => s.status === 'running').length;
-  const nextExp = list.length
-    ? fmtExpiry(list.map(s => s.expires_at).sort()[0]).text
-    : 'No active servers';
+  const nextExp = list.length ? fmtExpiry(list.map(s => s.expires_at).sort()[0]).text : '—';
 
-  $('#dash-sub').textContent = `${list.length} of ${maxSrv} free server slots used`;
+  $('#dash-sub').textContent = `${list.length} of ${maxSrv} free-tier slots allocated`;
   $('#summary').innerHTML = `
-    <div class="sum-card">
-      <small>Server Quota</small>
+    <div class="q-tile">
+      <small>Instances</small>
       <b>${list.length} / ${maxSrv}</b>
-      <div class="bar"><i style="width:${Math.min(100, Math.round(list.length * 100 / maxSrv))}%"></i></div>
+      <div class="q-meter"><i style="width:${Math.min(100, Math.round(list.length * 100 / maxSrv))}%"></i></div>
     </div>
-    <div class="sum-card"><small>Running Pods</small><b>${runningCount}</b></div>
-    <div class="sum-card"><small>Allocated RAM</small><b>${(totalRam / 1024).toFixed(1)} GB</b></div>
-    <div class="sum-card"><small>Next Expiry</small><b style="font-size:1.15rem">${esc(nextExp)}</b></div>
+    <div class="q-tile"><small>Running Pods</small><b>${runningCount}</b></div>
+    <div class="q-tile"><small>Allocated RAM</small><b>${(totalRam / 1024).toFixed(1)} GB</b></div>
+    <div class="q-tile"><small>Next Lease</small><b>${esc(nextExp)}</b></div>
   `;
+
+  $('#side-servers').innerHTML = list.length ? list.map(s => {
+    const dotCls = s.status === 'running' ? 'dot--ok' : s.status === 'failed' ? 'dot--err' : s.status === 'stopped' ? '' : 'dot--warn';
+    return `<button type="button" class="ah-sidebar__item" style="height:30px;font:400 12.5px/18px var(--font-mono)" data-side-manage="${esc(s.id)}">
+      <i class="dot ${dotCls}"></i><span style="overflow:hidden;text-overflow:ellipsis">${esc(s.name)}</span>
+    </button>`;
+  }).join('') : `<span style="padding:4px 8px;font:400 12px/18px var(--font-mono);color:var(--text-muted)">none</span>`;
 }
 
 async function loadServers() {
@@ -689,27 +1102,26 @@ async function loadServers() {
     const p = catalog?.plans?.find(x => x.id === s.plan);
     const exp = fmtExpiry(s.expires_at);
     return `
-    <div class="srv-card" style="--srv-accent:${esc(g?.accent || '#5ee062')}">
+    <div class="srv-row">
       <div>
         <div class="srv-title">
-          ${ICONS[s.game] || ''}
           <b>${esc(s.name)}</b>
-          <span class="badge s-${esc(s.status)}"><i></i>${esc(s.status)}</span>
-          ${s.autoscale ? `<span class="tag free">HPA ${esc(s.min_replicas)}&ndash;${esc(s.max_replicas)} pods</span>` : ''}
+          <span class="status-badge s-${esc(s.status)}">${esc(s.status)}</span>
+          ${s.autoscale ? `<span class="status-badge" style="background:var(--bg);color:var(--text-muted)">hpa ${esc(s.min_replicas)}-${esc(s.max_replicas)}</span>` : ''}
         </div>
         <div class="srv-motd">${esc(s.motd || g?.default_motd || '')}</div>
         <div class="srv-meta">
           <span>${esc(g?.label || s.game)} ${esc(g?.version || '')}</span>
-          <span>&bull; ${esc(p?.label || s.plan)} (${p ? p.ram_mb / 1024 + ' GB' : ''})</span>
-          <span>&bull; ${esc(s.ready_replicas ?? 0)}/${esc(s.desired_replicas ?? 1)} pods</span>
-          <span>&bull; ${esc(exp.text)}</span>
-          ${s.k8s_name ? `<span>&bull; <code>${esc(s.k8s_name)}</code></span>` : ''}
+          <span>${esc(p?.label || s.plan)} (${p ? p.ram_mb / 1024 + ' GB' : ''})</span>
+          <span>pods:${esc(s.ready_replicas ?? 0)}/${esc(s.desired_replicas ?? 1)}</span>
+          <span>ttl:${esc(exp.text)}</span>
+          ${s.k8s_name ? `<span>${esc(s.k8s_name)}</span>` : ''}
         </div>
         ${s.url && s.status !== 'stopped' ? `
           <div class="srv-url-row">
             <a class="srv-url" href="${esc(s.url)}" target="_blank" rel="noopener">${esc(s.url)}</a>
-            <button type="button" class="sm" data-copy="${esc(s.url)}">Copy URL</button>
-            <a href="${esc(s.url)}" target="_blank" rel="noopener"><button type="button" class="sm">Open Console</button></a>
+            <button type="button" class="sm" data-copy="${esc(s.url)}">Copy</button>
+            <a href="${esc(s.url)}" target="_blank" rel="noopener" class="as-btn sm">Console</a>
             <button type="button" class="sm ghost" data-share="${esc(s.id)}">Share</button>
           </div>` : ''}
         ${s.error ? `<div class="srv-err">${esc(s.error)}</div>` : ''}
@@ -719,13 +1131,12 @@ async function loadServers() {
           ? `<button type="button" class="primary sm" data-start="${esc(s.id)}">Start</button>`
           : `<button type="button" class="sm" data-stop="${esc(s.id)}" ${s.status === 'deleting' ? 'disabled' : ''}>Stop</button>`}
         <button type="button" class="sm" data-manage="${esc(s.id)}" ${s.status === 'deleting' ? 'disabled' : ''}>Manage</button>
-        <button type="button" class="sm" data-renew="${esc(s.id)}" ${s.status === 'deleting' ? 'disabled' : ''}>Renew 24h</button>
+        <button type="button" class="sm" data-renew="${esc(s.id)}" ${s.status === 'deleting' ? 'disabled' : ''}>Renew</button>
       </div>
     </div>`;
   }).join('') : `
-    <div class="card" style="text-align:center;padding:34px">
-      <h3 style="margin:0">No servers yet</h3>
-      <p>Use the builder below to launch your first free OpenShift game server.</p>
+    <div class="srv-row" style="grid-template-columns:1fr;color:var(--text-muted)">
+      No instances provisioned yet. Use the form below to deploy one.
     </div>`;
 
   const busy = list.some(s => s.status === 'provisioning' || s.status === 'deleting');
@@ -756,9 +1167,9 @@ async function openManage(id) {
   if (!s) return;
   managingId = id;
   deleteConfirm = false;
-  $('#m-delete').textContent = 'Delete Server';
+  $('#m-delete').textContent = 'Delete';
   $('#m-title').textContent = s.name;
-  $('#m-sub').textContent = `${s.game} · ${s.plan} · ${s.ready_replicas ?? 0}/${s.desired_replicas ?? 1} pods · ${s.k8s_name || ''}`;
+  $('#m-sub').textContent = `${s.game} · ${s.plan} · pods ${s.ready_replicas ?? 0}/${s.desired_replicas ?? 1} · ${s.k8s_name || ''}`;
   $('#m-name').value = s.name;
   $('#m-plan').value = s.plan;
   $('#m-motd').value = s.motd || '';
@@ -766,10 +1177,10 @@ async function openManage(id) {
   $('#m-min').value = String(s.min_replicas || 1);
   $('#m-max').value = String(s.max_replicas || 3);
   $('#m-scale-opts').classList.toggle('hidden', !s.autoscale);
-  $('#m-power').textContent = s.status === 'stopped' ? 'Start Server' : 'Stop Server';
+  $('#m-power').textContent = s.status === 'stopped' ? 'Start' : 'Stop';
   $('#m-restart').disabled = s.status !== 'running';
   setManageTab('events');
-  $('#m-events').innerHTML = '<div style="color:var(--dim)">Loading events...</div>';
+  $('#m-events').innerHTML = '<div style="color:var(--text-muted)">Loading events...</div>';
   if (!$('#manage-dlg').open) $('#manage-dlg').showModal();
   try {
     const evs = await api(`/servers/${id}/events`);
@@ -778,41 +1189,48 @@ async function openManage(id) {
         <span class="ev-time">${new Date(ev.created_at).toLocaleTimeString()}</span>
         <span class="ev-type">${esc(ev.event_type)}</span>
         <span>${esc(ev.message)}</span>
-      </div>`).join('') : '<div style="color:var(--dim)">No events recorded yet.</div>';
+      </div>`).join('') : '<div style="color:var(--text-muted)">No events recorded yet.</div>';
   } catch (e) {
-    $('#m-events').innerHTML = `<div style="color:var(--err)">${esc(e.message)}</div>`;
+    $('#m-events').innerHTML = `<div style="color:var(--danger)">${esc(e.message)}</div>`;
   }
 }
+
+$('#side-servers').addEventListener('click', e => {
+  const btn = e.target.closest('[data-side-manage]');
+  if (btn) openManage(btn.dataset.sideManage);
+});
+
+$('#side-toggle').onclick = () => $('#sidebar').classList.toggle('is-open');
 
 $('#servers').addEventListener('click', async e => {
   const btn = e.target.closest('button');
   if (!btn) return;
   if (btn.dataset.copy) {
-    try { await navigator.clipboard.writeText(btn.dataset.copy); toast('Server URL copied to clipboard'); }
+    try { await navigator.clipboard.writeText(btn.dataset.copy); toast('URL copied'); }
     catch (err) { toast('Could not copy URL', true); }
     return;
   }
   if (btn.dataset.share) {
     const link = `${location.origin}/#/s/${btn.dataset.share}`;
-    try { await navigator.clipboard.writeText(link); toast('Shareable status link copied'); }
+    try { await navigator.clipboard.writeText(link); toast('Share link copied'); }
     catch (err) { toast('Could not copy link', true); }
     return;
   }
   if (btn.dataset.stop) {
-    try { await api(`/servers/${btn.dataset.stop}/stop`, 'POST'); toast('Stopping server (scaling to 0 pods)'); }
+    try { await api(`/servers/${btn.dataset.stop}/stop`, 'POST'); toast('Stopping instance'); }
     catch (err) { toast(err.message, true); }
     loadServers();
     return;
   }
   if (btn.dataset.start) {
-    try { await api(`/servers/${btn.dataset.start}/start`, 'POST'); toast('Starting server...'); }
+    try { await api(`/servers/${btn.dataset.start}/start`, 'POST'); toast('Starting instance'); }
     catch (err) { toast(err.message, true); }
     loadServers();
     return;
   }
   if (btn.dataset.manage) { openManage(btn.dataset.manage); return; }
   if (btn.dataset.renew) {
-    try { await api('/servers/' + btn.dataset.renew + '/renew', 'POST'); toast('Server renewed for 24h'); }
+    try { await api('/servers/' + btn.dataset.renew + '/renew', 'POST'); toast('Lease extended by 24h'); }
     catch (err) { toast(err.message, true); }
     loadServers();
   }
@@ -836,7 +1254,7 @@ $('#manage-form').addEventListener('submit', async e => {
       min_replicas: Number($('#m-min').value),
       max_replicas: Number($('#m-max').value),
     });
-    toast('Server settings updated');
+    toast('Settings saved');
     $('#manage-dlg').close();
     loadServers();
   } catch (err) { toast(err.message, true); }
@@ -847,7 +1265,7 @@ $('#m-power').onclick = async () => {
   const op = s?.status === 'stopped' ? 'start' : 'stop';
   try {
     await api(`/servers/${managingId}/${op}`, 'POST');
-    toast(op === 'stop' ? 'Server stopping (0 pods)' : 'Server starting');
+    toast(op === 'stop' ? 'Stopping instance (0 pods)' : 'Starting instance');
     $('#manage-dlg').close();
     loadServers();
   } catch (err) { toast(err.message, true); }
@@ -864,7 +1282,7 @@ $('#m-renew').onclick = async () => {
   if (!managingId) return;
   try {
     await api(`/servers/${managingId}/renew`, 'POST');
-    toast('Server renewed for 24h');
+    toast('Lease extended by 24h');
     loadServers();
     openManage(managingId);
   } catch (err) { toast(err.message, true); }
@@ -873,12 +1291,12 @@ $('#m-delete').onclick = async () => {
   if (!managingId) return;
   if (!deleteConfirm) {
     deleteConfirm = true;
-    $('#m-delete').textContent = 'Click again to confirm';
+    $('#m-delete').textContent = 'Confirm Delete';
     return;
   }
   try {
     await api(`/servers/${managingId}`, 'DELETE');
-    toast('Server scheduled for deletion');
+    toast('Instance scheduled for deletion');
     $('#manage-dlg').close();
     loadServers();
   } catch (err) { toast(err.message, true); }
@@ -902,7 +1320,7 @@ $('#create-panel').addEventListener('click', e => {
       $('#c-max').value = String(pr.max_replicas || 3);
       $('#c-scale-opts').classList.toggle('hidden', !pr.autoscale);
       renderPickers();
-      toast(`Preset "${pr.label}" applied`);
+      toast(`Applied preset: ${pr.label}`);
     }
   }
 });
@@ -923,7 +1341,7 @@ $('#create-form').addEventListener('submit', async e => {
     });
     e.target.reset();
     $('#c-scale-opts').classList.add('hidden');
-    toast('Server queued for provisioning');
+    toast('Instance queued for provisioning');
     loadServers();
   } catch (err) {
     $('#create-msg').textContent = err.message;
@@ -942,38 +1360,39 @@ $('#landing').addEventListener('click', e => {
 
 function openAuth(m) {
   mode = m;
-  $('#auth-title').textContent = m === 'login' ? 'Log in' : 'Create free account';
-  $('#auth-sub').textContent = m === 'login' ? 'Welcome back to FreeKube.' : 'No credit card required. Ready in seconds.';
-  $('#auth-submit').textContent = m === 'login' ? 'Log in' : 'Sign up';
-  $('#auth-switch').textContent = m === 'login' ? 'No account yet?' : 'Already have an account?';
+  $('#auth-title').textContent = m === 'login' ? 'Sign in' : 'Create account';
+  $('#auth-sub').textContent = m === 'login' ? 'Sign in to manage your instances.' : 'Free tier: up to 2 concurrent instances.';
+  $('#auth-submit').textContent = m === 'login' ? 'Sign in' : 'Create account';
+  $('#auth-switch').textContent = m === 'login' ? 'Need an account?' : 'Have an account?';
   $('#a-pw').autocomplete = m === 'login' ? 'current-password' : 'new-password';
   $('#auth-msg').textContent = '';
   if (!$('#auth').open) $('#auth').showModal();
 }
+
 async function startDemo() {
   try {
     await api('/demo', 'POST');
     me = await api('/me');
     if ($('#auth').open) $('#auth').close();
     renderNav(); renderPickers(); loadServers();
-    toast('Demo session started (2 free server slots)');
+    toast('Demo session started');
   } catch (err) { toast(err.message, true); }
 }
 
 async function openClusterStatus() {
   if (!$('#cluster-dlg').open) $('#cluster-dlg').showModal();
-  $('#cluster-body').innerHTML = '<div style="color:var(--dim)">Querying cluster health...</div>';
+  $('#cluster-body').innerHTML = '<div style="color:var(--text-muted)">Querying cluster health...</div>';
   try {
     const c = await api('/cluster');
-    const pill = v => `<span class="tag ${v === 'healthy' || v === 'online' ? 'free' : ''}">${esc(v)}</span>`;
+    const tag = v => `<span class="status-badge ${v === 'healthy' || v === 'online' ? 's-running' : 's-failed'}">${esc(v)}</span>`;
     $('#cluster-body').innerHTML = `
-      <div style="display:flex;justify-content:space-between"><span>PostgreSQL</span>${pill(c.postgres)}</div>
-      <div style="display:flex;justify-content:space-between"><span>Redis (Sessions &amp; Queue)</span>${pill(c.redis)}</div>
-      <div style="display:flex;justify-content:space-between"><span>K8s Worker</span>${pill(c.worker)}</div>
-      <div style="display:flex;justify-content:space-between"><span>Pending Queue Jobs</span><b>${esc(c.queue_depth)}</b></div>
-      ${c.worker_heartbeat ? `<div style="font-size:.78rem;color:var(--dim);margin-top:4px">Last worker heartbeat: ${esc(c.worker_heartbeat)}</div>` : ''}
+      <div style="display:flex;justify-content:space-between;align-items:center"><span>PostgreSQL</span>${tag(c.postgres)}</div>
+      <div style="display:flex;justify-content:space-between;align-items:center"><span>Redis</span>${tag(c.redis)}</div>
+      <div style="display:flex;justify-content:space-between;align-items:center"><span>K8s Worker</span>${tag(c.worker)}</div>
+      <div style="display:flex;justify-content:space-between;align-items:center"><span>Queue Depth</span><b class="mono">${esc(c.queue_depth)}</b></div>
+      ${c.worker_heartbeat ? `<div class="mono" style="font-size:11.5px;color:var(--text-muted);margin-top:4px">heartbeat: ${esc(c.worker_heartbeat)}</div>` : ''}
     `;
-  } catch (err) { $('#cluster-body').innerHTML = `<div style="color:var(--err)">${esc(err.message)}</div>`; }
+  } catch (err) { $('#cluster-body').innerHTML = `<div style="color:var(--danger)">${esc(err.message)}</div>`; }
 }
 
 async function loadPublicShare() {
@@ -982,18 +1401,19 @@ async function loadPublicShare() {
   try {
     const s = await api('/public/servers/' + encodeURIComponent(id));
     $('#public-card').innerHTML = `
-      <div class="srv-title">${ICONS[s.game] || ''}<h2 style="margin:0">${esc(s.name)}</h2><span class="badge s-${esc(s.status)}"><i></i>${esc(s.status)}</span></div>
-      <p style="margin:6px 0 0">${esc(s.motd || '')}</p>
-      <div class="srv-meta" style="margin-top:10px">
-        <span>${esc(s.game)} &bull; ${esc(s.plan)}</span>
-        <span>&bull; ${esc(s.ready_replicas ?? 0)}/${esc(s.desired_replicas ?? 1)} pods</span>
-        <span>&bull; ${esc(fmtExpiry(s.expires_at).text)}</span>
+      <div class="srv-title"><b>${esc(s.name)}</b><span class="status-badge s-${esc(s.status)}">${esc(s.status)}</span></div>
+      <div class="srv-motd">${esc(s.motd || '')}</div>
+      <div class="srv-meta">
+        <span>${esc(s.game)}</span>
+        <span>${esc(s.plan)}</span>
+        <span>pods:${esc(s.ready_replicas ?? 0)}/${esc(s.desired_replicas ?? 1)}</span>
+        <span>ttl:${esc(fmtExpiry(s.expires_at).text)}</span>
       </div>
-      ${s.url ? `<div class="srv-url-row"><a class="srv-url" href="${esc(s.url)}" target="_blank" rel="noopener">${esc(s.url)}</a><a href="${esc(s.url)}" target="_blank" rel="noopener"><button type="button" class="primary sm">Open Live Console</button></a></div>` : ''}
-      <div style="margin-top:14px"><a href="#"><button type="button" class="sm ghost">&larr; Back to FreeKube</button></a></div>
+      ${s.url ? `<div class="srv-url-row"><a class="srv-url" href="${esc(s.url)}" target="_blank" rel="noopener">${esc(s.url)}</a><a href="${esc(s.url)}" target="_blank" rel="noopener" class="as-btn primary sm">Open Console</a></div>` : ''}
+      <div style="margin-top:12px"><a href="#" class="as-btn sm">Back to FreeKube</a></div>
     `;
   } catch (e) {
-    $('#public-card').innerHTML = `<h3>Server not found</h3><p>This shared server may have expired or been deleted.</p><a href="#"><button type="button" class="sm">Back to FreeKube</button></a>`;
+    $('#public-card').innerHTML = `<b>Instance not found</b><p style="color:var(--text-muted)">This shared instance may have expired or been deleted.</p><a href="#" class="as-btn sm">Back to FreeKube</a>`;
   }
 }
 window.addEventListener('hashchange', () => { renderNav(); loadPublicShare(); });
@@ -1012,7 +1432,7 @@ $('#auth-form').addEventListener('submit', async e => {
     me = await api('/me');
     $('#auth').close();
     renderNav(); renderPickers(); loadServers();
-    toast(mode === 'login' ? 'Logged in' : 'Account created');
+    toast(mode === 'login' ? 'Signed in' : 'Account created');
   } catch (err) { $('#auth-msg').textContent = err.message; }
 });
 

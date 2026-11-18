@@ -148,42 +148,50 @@ def page(host):
     return f"""<!doctype html><html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>{esc(SERVER_NAME)} | {esc(GAME_LABEL)}</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anton&family=Geist+Mono:wght@400;500&family=Geist:wght@400;500;600&display=swap">
 <style>
-:root{{--bg:{t['bg']};--fg:{t['fg']};--accent:{t['accent']};--panel:{t['panel']}}}
+:root{{--bg:#0a0a0a;--surface:#111111;--over:#1f1f1f;--line:#262626;--fg:#f4efe8;--muted:#a1a1aa;--accent:#3ddc84}}
 *{{box-sizing:border-box}}
-body{{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;background:radial-gradient(circle at top, color-mix(in srgb, var(--accent) 14%, var(--bg)), var(--bg) 60%);color:var(--fg);min-height:100vh;display:grid;place-items:center;padding:24px}}
-main{{width:min(680px,100%);background:var(--panel);border:1px solid color-mix(in srgb, var(--accent) 35%, #ffffff18);border-radius:16px;padding:28px;box-shadow:0 24px 60px #00000080}}
-.top{{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap;margin-bottom:20px}}
-h1{{margin:0;font-size:1.65rem;display:flex;align-items:center;gap:10px}}
-.dot{{width:11px;height:11px;background:var(--accent);border-radius:50%;box-shadow:0 0 12px var(--accent);animation:pulse 2s infinite}}
-@keyframes pulse{{50%{{opacity:.45}}}}
-.pill{{font-size:.75rem;font-weight:700;padding:4px 10px;border-radius:99px;background:color-mix(in srgb, var(--accent) 18%, transparent);color:var(--accent);border:1px solid color-mix(in srgb, var(--accent) 40%, transparent)}}
-.sub{{opacity:.78;margin-top:4px;font-size:.95rem}}
-.addr-box{{display:flex;justify-content:space-between;align-items:center;gap:10px;background:#00000040;border:1px solid #ffffff1a;border-radius:10px;padding:10px 14px;margin-bottom:18px;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.92rem}}
-button{{cursor:pointer;font:inherit;font-size:.82rem;font-weight:600;background:var(--accent);color:#081008;border:0;border-radius:7px;padding:6px 12px}}
-button:hover{{filter:brightness(1.08)}}
-.stats{{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-bottom:18px}}
-.stat{{background:#00000033;border:1px solid #ffffff14;border-radius:10px;padding:12px}}
-.stat small{{display:block;opacity:.65;font-size:.76rem;text-transform:uppercase;letter-spacing:.04em}}
-.stat b{{display:block;font-size:1.25rem;margin-top:4px}}
-.bar{{height:7px;background:#ffffff14;border-radius:99px;overflow:hidden;margin-top:8px}}
-.bar i{{display:block;height:100%;background:var(--accent);transition:width .4s ease}}
-.console{{background:#07090c;border:1px solid #ffffff14;border-radius:10px;padding:12px 14px;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.8rem;line-height:1.55;color:#b8c4d0;max-height:150px;overflow:auto}}
-.meta{{display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-top:14px;font-size:.78rem;opacity:.65}}
+body{{margin:0;font-family:"Geist",system-ui,sans-serif;background:var(--bg);color:var(--fg);min-height:100vh;padding:24px;-webkit-font-smoothing:antialiased}}
+main{{width:min(780px,100%);margin:0 auto;background:var(--surface);padding:16px;display:flex;flex-direction:column;gap:2px}}
+.top{{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;padding:18px 20px;background:var(--bg)}}
+h1{{margin:0;font:400 clamp(26px,3.5vw,38px)/1 "Anton",system-ui,sans-serif;letter-spacing:.02em;text-transform:uppercase}}
+.state{{display:inline-flex;align-items:center;gap:8px;font:500 12px/1 "Geist Mono",ui-monospace,monospace;color:var(--fg)}}
+.state i{{width:8px;height:8px;border-radius:999px;background:var(--accent)}}
+.sub{{color:var(--muted);margin-top:6px;font:400 13px/18px "Geist Mono",ui-monospace,monospace}}
+.addr-box{{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;background:var(--bg);padding:12px 20px;font:400 13px/1 "Geist Mono",ui-monospace,monospace}}
+button{{cursor:pointer;font:500 12px/1 "Geist",system-ui,sans-serif;background:var(--surface);color:var(--fg);border:1px solid var(--line);border-radius:0;height:32px;padding:0 14px;transition:background-color .15s,border-color .15s}}
+button:hover:not(:disabled){{background:var(--over);border-color:#6a6a72}}
+button.primary{{background:var(--fg);color:#0a0a0b;border-color:var(--fg)}}
+button.primary:hover:not(:disabled){{background:#e4ded5;border-color:#e4ded5}}
+button:disabled{{opacity:.45;cursor:not-allowed}}
+.stats{{display:grid;grid-template-columns:repeat(4,1fr);gap:2px}}
+.stat{{padding:14px 18px;background:var(--bg)}}
+.stat small{{display:block;color:var(--muted);font:500 11px/16px "Geist Mono",ui-monospace,monospace;text-transform:uppercase;letter-spacing:.06em}}
+.stat b{{display:block;font:500 20px/26px "Geist Mono",ui-monospace,monospace;margin-top:4px;font-variant-numeric:tabular-nums}}
+.bar{{height:4px;background:var(--over);margin-top:10px}}
+.bar i{{display:block;height:100%;background:var(--fg);transition:width .3s ease}}
+.console-wrap{{background:var(--bg);padding:16px 20px}}
+.console{{font:400 12px/21px "Geist Mono",ui-monospace,monospace;color:var(--muted);height:190px;overflow:auto}}
+.console div:last-child{{color:var(--fg)}}
+.meta{{display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px;padding:12px 20px;font:400 12px/16px "Geist Mono",ui-monospace,monospace;color:var(--muted);background:var(--bg)}}
+@media(max-width:640px){{.stats{{grid-template-columns:repeat(2,1fr)}}}}
 </style></head><body><main>
 <div class="top">
   <div>
-    <h1><span class="dot"></span>{esc(SERVER_NAME)}</h1>
+    <h1>{esc(SERVER_NAME)}</h1>
     <div class="sub">{esc(GAME_LABEL)} {esc(GAME_VERSION)} &middot; <span id="motd">{esc(s['motd'])}</span></div>
   </div>
-  <span class="pill">SIMULATED POD &bull; ONLINE</span>
+  <span class="state"><i></i>running</span>
 </div>
 
 <div class="addr-box">
   <span id="addr">{esc(addr)}</span>
-  <div style="display:flex;gap:8px">
-    <button id="stress-btn" type="button" style="background:#ffffff1a;color:var(--fg)">Simulate CPU Load</button>
-    <button id="copy-btn" type="button">Copy Address</button>
+  <div style="display:flex;gap:6px">
+    <button id="stress-btn" type="button">Simulate CPU Load</button>
+    <button id="copy-btn" class="primary" type="button">Copy Address</button>
   </div>
 </div>
 
@@ -208,15 +216,17 @@ button:hover{{filter:brightness(1.08)}}
   </div>
 </div>
 
-<div class="console" id="console">{logs_html}</div>
-<form id="cmd-form" style="display:flex;gap:8px;margin-top:10px">
-  <input id="cmd-input" placeholder="Type a command (e.g. /help, /say hello, /save-all)" style="flex:1;background:#07090c;border:1px solid #ffffff22;border-radius:8px;padding:8px 12px;color:var(--fg);font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.82rem">
-  <button type="submit">Send</button>
-</form>
+<div class="console-wrap">
+  <div class="console" id="console">{logs_html}</div>
+  <form id="cmd-form" style="display:flex;gap:6px;margin-top:10px;padding-top:10px;border-top:1px solid var(--line)">
+    <input id="cmd-input" placeholder="/help, /say hello, /save-all" style="flex:1;background:var(--surface);border:1px solid var(--line);border-radius:0;padding:0 10px;height:32px;color:var(--fg);font:400 12px/1 'Geist Mono',ui-monospace,monospace">
+    <button type="submit">Run</button>
+  </form>
+</div>
 
 <div class="meta">
-  <span>Pod: <code id="pod">{esc(POD)}</code></span>
-  <span>Stateless FreeKube demo server &middot; auto-refreshing live</span>
+  <span>pod: <code id="pod">{esc(POD)}</code></span>
+  <span>freekube instance &middot; 3s poll</span>
 </div>
 </main>
 <script>
