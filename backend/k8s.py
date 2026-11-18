@@ -32,6 +32,7 @@ PATHS = {
     "services": "/api/v1/namespaces/{ns}/services",
     "routes": "/apis/route.openshift.io/v1/namespaces/{ns}/routes",
     "hpas": "/apis/autoscaling/v2/namespaces/{ns}/horizontalpodautoscalers",
+    "pods": "/api/v1/namespaces/{ns}/pods",
 }
 
 
@@ -96,6 +97,27 @@ def route_host(name):
 def deployment_ready(name):
     d = get("deployments", name)
     return bool(d and (d.get("status", {}).get("availableReplicas") or 0) >= 1)
+
+
+def deployment_replicas(name):
+    d = get("deployments", name)
+    if not d:
+        return 0, 0
+    ready = int(d.get("status", {}).get("readyReplicas") or 0)
+    desired = int(d.get("spec", {}).get("replicas") or 0)
+    return ready, desired
+
+
+def pod_logs(name, tail=50):
+    pods = list_items("pods", selector=f"app={name}")
+    if not pods:
+        return ["No active pods found for this deployment."]
+    pod_name = pods[0]["metadata"]["name"]
+    r = _session().get(_url("pods", f"{pod_name}/log"), params={"tailLines": tail}, timeout=10)
+    if r.status_code != 200:
+        return [f"Could not fetch logs from pod {pod_name} (HTTP {r.status_code})."]
+    lines = [line for line in r.text.splitlines() if line.strip()]
+    return lines or [f"Pod {pod_name} has no log output yet."]
 
 
 def _server_env(server, game, plan):

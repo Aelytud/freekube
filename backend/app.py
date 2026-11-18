@@ -2,6 +2,7 @@
 import json
 import re
 import secrets
+import time
 import uuid
 from datetime import datetime, timedelta, timezone
 from functools import wraps
@@ -110,6 +111,35 @@ def readyz():
     return "ready"
 
 
+@app.get("/metrics")
+def metrics():
+    users = q("SELECT count(*) AS n FROM users")[0]["n"]
+    srv_rows = q("SELECT status, count(*) AS n FROM servers GROUP BY status")
+    try:
+        qdepth = rds().llen(common.QUEUE)
+        w_alive = 1 if rds().get("worker:alive") else 0
+    except redis.RedisError:
+        qdepth, w_alive = -1, 0
+    lines = [
+        "# HELP freekube_users_total Total registered users",
+        "# TYPE freekube_users_total gauge",
+        f"freekube_users_total {users}",
+        "# HELP freekube_servers_total Servers by status",
+        "# TYPE freekube_servers_total gauge",
+    ]
+    for r in srv_rows:
+        lines.append(f'freekube_servers_total{{status="{r["status"]}"}} {r["n"]}')
+    lines += [
+        "# HELP freekube_queue_depth Pending jobs in Redis queue",
+        "# TYPE freekube_queue_depth gauge",
+        f"freekube_queue_depth {qdepth}",
+        "# HELP freekube_worker_alive Whether a worker heartbeat is active",
+        "# TYPE freekube_worker_alive gauge",
+        f"freekube_worker_alive {w_alive}",
+    ]
+    return "\n".join(lines) + "\n", 200, {"Content-Type": "text/plain; version=0.0.4; charset=utf-8"}
+
+
 # ---------------------------------------------------------------- Public
 @app.get("/api/catalog")
 def catalog():
@@ -136,6 +166,45 @@ def stats():
     return jsonify(cached("stats", 15, compute))
 
 
+@app.get("/api/cluster")
+def cluster_status():
+    pg_ok = True
+    try:
+        q("SELECT 1")
+    except Exception:  # noqa
+        pg_ok = False
+    rds_ok, qdepth, worker_ts = True, 0, None
+    try:
+        rds().ping()
+        qdepth = rds().llen(common.QUEUE)
+        worker_ts = rds().get("worker:alive")
+    except redis.RedisError:
+        rds_ok = False
+    return jsonify({
+        "postgres": "healthy" if pg_ok else "down",
+        "redis": "healthy" if rds_ok else "down",
+        "worker": "online" if worker_ts else "offline",
+        "worker_heartbeat": worker_ts,
+        "queue_depth": qdepth,
+    })
+
+
+@app.get("/api/public/servers/<server_id>")
+def public_server(server_id):
+    try:
+        uuid.UUID(server_id)
+    except ValueError:
+        return err("not found", 404)
+    rows = q(
+        "SELECT id, name, game, plan, status, motd, url, autoscale, min_replicas, max_replicas, "
+        "ready_replicas, desired_replicas, expires_at FROM servers WHERE id=%s",
+        (server_id,),
+    )
+    if not rows:
+        return err("not found", 404)
+    return jsonify(serialize(rows[0]))
+
+
 # ------------------------------------------------------------------ Auth
 @app.post("/api/register")
 def register():
@@ -159,6 +228,17 @@ def register():
     return start_session(rows[0])
 
 
+@app.post("/api/demo")
+def demo_login():
+    if not rate_limit(f"rl:demo:{client_ip()}", 15, 3600):
+        return err("too many demo accounts created, try later", 429)
+    email = f"guest-{secrets.token_hex(4)}@demo.freekube"
+    pw_hash = generate_password_hash(secrets.token_urlsafe(16))
+    rows = q("INSERT INTO users(email, pw_hash) VALUES (%s, %s) RETURNING id, email", (email, pw_hash))
+    invalidate("stats")
+    return start_session(rows[0])
+
+
 @app.post("/api/login")
 def login():
     body = request.get_json(silent=True) or {}
@@ -169,6 +249,17 @@ def login():
     rows = q("SELECT id, email, pw_hash FROM users WHERE email=%s", (email,))
     if not rows or not check_password_hash(rows[0]["pw_hash"], password):
         return err("wrong email or password", 401)
+    return start_session(rows[0])
+
+
+@app.post("/api/demo")
+def demo_login():
+    if not rate_limit(f"rl:demo:{client_ip()}", 15, 3600):
+        return err("too many demo accounts created, try later", 429)
+    email = f"guest-{secrets.token_hex(4)}@demo.freekube"
+    pw_hash = generate_password_hash(secrets.token_urlsafe(16))
+    rows = q("INSERT INTO users(email, pw_hash) VALUES (%s, %s) RETURNING id, email", (email, pw_hash))
+    invalidate("stats")
     return start_session(rows[0])
 
 
@@ -196,7 +287,7 @@ def list_servers():
     def compute():
         rows = q(
             "SELECT id, name, game, plan, status, k8s_name, url, motd, autoscale, min_replicas, max_replicas, "
-            "error, created_at, expires_at FROM servers WHERE user_id=%s ORDER BY created_at DESC",
+            "ready_replicas, desired_replicas, error, created_at, expires_at FROM servers WHERE user_id=%s ORDER BY created_at DESC",
             (uid,),
         )
         return [serialize(r) for r in rows]
@@ -261,7 +352,7 @@ def _owned(server_id):
     except ValueError:
         return None
     rows = q(
-        "SELECT id, name, motd, autoscale, min_replicas, max_replicas, status FROM servers WHERE id=%s AND user_id=%s",
+        "SELECT id, name, plan, motd, autoscale, min_replicas, max_replicas, status FROM servers WHERE id=%s AND user_id=%s",
         (server_id, g.user["id"]),
     )
     return rows[0] if rows else None
@@ -279,7 +370,10 @@ def update_server(server_id):
     body = request.get_json(silent=True) or {}
     name = str(body.get("name", s["name"])).strip()
     motd = str(body.get("motd", s.get("motd") or "")).strip()[:120]
+    plan = body.get("plan", s["plan"])
     autoscale = bool(body.get("autoscale", s.get("autoscale", False)))
+    if plan not in common.PLANS:
+        return err("unknown plan")
     try:
         min_rep = max(1, min(2, int(body.get("min_replicas", s.get("min_replicas", 1)))))
         max_rep = max(min_rep, min(5, int(body.get("max_replicas", s.get("max_replicas", 3)))))
@@ -288,7 +382,7 @@ def update_server(server_id):
     if not NAME_RE.match(name):
         return err("name: 3-32 chars, letters, digits, space, _ or -")
 
-    text_changed = (name != s["name"]) or (motd != (s.get("motd") or ""))
+    pod_changed = (name != s["name"]) or (motd != (s.get("motd") or "")) or (plan != s["plan"])
     hpa_changed = (
         autoscale != bool(s.get("autoscale", False))
         or min_rep != int(s.get("min_replicas", 1))
@@ -296,17 +390,67 @@ def update_server(server_id):
     )
 
     q(
-        "UPDATE servers SET name=%s, motd=%s, autoscale=%s, min_replicas=%s, max_replicas=%s, updated_at=now() WHERE id=%s",
-        (name, motd, autoscale, min_rep, max_rep, server_id),
+        "UPDATE servers SET name=%s, plan=%s, motd=%s, autoscale=%s, min_replicas=%s, max_replicas=%s, updated_at=now() WHERE id=%s",
+        (name, plan, motd, autoscale, min_rep, max_rep, server_id),
     )
-    record_event(server_id, "updated", f"Updated settings (name='{name}', autoscale={autoscale}).")
+    record_event(server_id, "updated", f"Updated settings (name='{name}', plan={plan}, autoscale={autoscale}).")
     invalidate(servers_key(g.user["id"]))
     if s["status"] == "running":
-        if text_changed:
+        if pod_changed:
             enqueue("restart", server_id)
         if hpa_changed:
             enqueue("autoscale", server_id)
-    return jsonify({"ok": True, "name": name, "motd": motd, "autoscale": autoscale, "min_replicas": min_rep, "max_replicas": max_rep})
+    return jsonify({"ok": True, "name": name, "plan": plan, "motd": motd, "autoscale": autoscale, "min_replicas": min_rep, "max_replicas": max_rep})
+
+
+@app.post("/api/servers/<server_id>/stop")
+@login_required
+def stop_server(server_id):
+    s = _owned(server_id)
+    if not s:
+        return err("not found", 404)
+    if s["status"] not in ("running", "provisioning"):
+        return err("server cannot be stopped in its current state", 409)
+    enqueue("stop", server_id)
+    record_event(server_id, "stopping", "Scale to 0 pods requested.")
+    return jsonify({"ok": True}), 202
+
+
+@app.post("/api/servers/<server_id>/start")
+@login_required
+def start_server(server_id):
+    s = _owned(server_id)
+    if not s:
+        return err("not found", 404)
+    if s["status"] != "stopped":
+        return err("only stopped servers can be started", 409)
+    q("UPDATE servers SET status='provisioning', updated_at=now() WHERE id=%s", (server_id,))
+    invalidate(servers_key(g.user["id"]), "stats")
+    enqueue("start", server_id)
+    return jsonify({"ok": True}), 202
+
+
+@app.get("/api/servers/<server_id>/logs")
+@login_required
+def server_logs(server_id):
+    s = _owned(server_id)
+    if not s:
+        return err("not found", 404)
+    refresh = request.args.get("refresh") == "1"
+    key = f"logs:{server_id}"
+    if refresh:
+        rds().delete(key)
+    raw = rds().get(key)
+    if not raw:
+        enqueue("logs", server_id)
+        for _ in range(10):
+            time.sleep(0.2)
+            raw = rds().get(key)
+            if raw:
+                break
+    if raw:
+        return jsonify(json.loads(raw))
+    return jsonify({"lines": ["Fetching pod logs from worker... click Refresh Logs in a moment."], "ts": None})
 
 
 @app.post("/api/servers/<server_id>/restart")

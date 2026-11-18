@@ -92,6 +92,54 @@ PLANS = {
 }
 
 
+PRESETS = [
+    {
+        "id": "vanilla",
+        "label": "Vanilla Survival",
+        "game": "minecraft",
+        "plan": "starter",
+        "name": "Survival Realm",
+        "motd": "Pure vanilla 1.21.4 survival — grief-free!",
+        "autoscale": False,
+        "min_replicas": 1,
+        "max_replicas": 3,
+    },
+    {
+        "id": "factory",
+        "label": "Factory Megabase",
+        "game": "satisfactory",
+        "plan": "standard",
+        "name": "FICSIT Alpha",
+        "motd": "The factory must grow — Tier 9 co-op.",
+        "autoscale": False,
+        "min_replicas": 1,
+        "max_replicas": 3,
+    },
+    {
+        "id": "vikings",
+        "label": "Viking Longhouse",
+        "game": "valheim",
+        "plan": "standard",
+        "name": "Kubeheim",
+        "motd": "Sail into the mist — bosses & building.",
+        "autoscale": False,
+        "min_replicas": 1,
+        "max_replicas": 3,
+    },
+    {
+        "id": "hpa-test",
+        "label": "HPA Load Test",
+        "game": "minecraft",
+        "plan": "plus",
+        "name": "Autoscale Arena",
+        "motd": "HPA enabled (1-4 pods) — try Simulate CPU Load!",
+        "autoscale": True,
+        "min_replicas": 1,
+        "max_replicas": 4,
+    },
+]
+
+
 def public_catalog():
     return {
         "games": [
@@ -118,6 +166,7 @@ def public_catalog():
             }
             for k, v in PLANS.items()
         ],
+        "presets": PRESETS,
         "limits": {"max_servers": MAX_SERVERS_PER_USER, "ttl_hours": SERVER_TTL_HOURS},
     }
 
@@ -213,6 +262,8 @@ CREATE TABLE IF NOT EXISTS servers (
   autoscale boolean NOT NULL DEFAULT false,
   min_replicas int NOT NULL DEFAULT 1,
   max_replicas int NOT NULL DEFAULT 3,
+  ready_replicas int NOT NULL DEFAULT 0,
+  desired_replicas int NOT NULL DEFAULT 1,
   error text,
   created_at timestamptz NOT NULL DEFAULT now(),
   updated_at timestamptz NOT NULL DEFAULT now(),
@@ -222,6 +273,8 @@ ALTER TABLE servers ADD COLUMN IF NOT EXISTS motd text;
 ALTER TABLE servers ADD COLUMN IF NOT EXISTS autoscale boolean NOT NULL DEFAULT false;
 ALTER TABLE servers ADD COLUMN IF NOT EXISTS min_replicas int NOT NULL DEFAULT 1;
 ALTER TABLE servers ADD COLUMN IF NOT EXISTS max_replicas int NOT NULL DEFAULT 3;
+ALTER TABLE servers ADD COLUMN IF NOT EXISTS ready_replicas int NOT NULL DEFAULT 0;
+ALTER TABLE servers ADD COLUMN IF NOT EXISTS desired_replicas int NOT NULL DEFAULT 1;
 CREATE INDEX IF NOT EXISTS servers_user_idx ON servers(user_id);
 CREATE INDEX IF NOT EXISTS servers_status_idx ON servers(status);
 CREATE TABLE IF NOT EXISTS server_events (

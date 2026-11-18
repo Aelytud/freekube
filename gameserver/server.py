@@ -23,6 +23,32 @@ RAM_MB = int(os.environ.get("RAM_MB", "2048"))
 POD = os.environ.get("HOSTNAME", socket.gethostname())
 STARTED = time.time()
 _stress_until = 0.0
+_extra_logs = []
+
+
+def _run_command(cmd):
+    cmd = cmd.strip()
+    if not cmd:
+        return "Empty command."
+    _extra_logs.append(f"> {cmd}")
+    low = cmd.lower()
+    if low == "/help":
+        reply = "[Console]: Commands: /say <msg>, /time set day, /save-all, /players, /status"
+    elif low.startswith("/say "):
+        reply = f"[Server]: {cmd[5:]}"
+    elif low.startswith("/time "):
+        reply = f"[World]: Time updated ({cmd[6:]})."
+    elif low == "/save-all":
+        reply = "[Save]: Saved world state to memory (14ms)."
+    elif low == "/players":
+        reply = f"[Players]: {fake_players()} / {MAX_SLOTS} simulated players online."
+    elif low == "/status":
+        reply = f"[Status]: Pod {POD} healthy, {RAM_MB} MB allocated."
+    else:
+        reply = f"[Console]: Unknown command '{cmd}'. Type /help for options."
+    _extra_logs.append(reply)
+    del _extra_logs[:-25]
+    return reply
 
 
 def _burn_cpu(seconds=20):
@@ -107,7 +133,7 @@ def status():
         "tps": tps,
         "uptime_s": int(time.time() - STARTED),
         "pod": POD,
-        "logs": CONSOLE_LINES.get(GAME, CONSOLE_LINES["minecraft"]),
+        "logs": CONSOLE_LINES.get(GAME, CONSOLE_LINES["minecraft"]) + _extra_logs,
     }
 
 
@@ -183,6 +209,10 @@ button:hover{{filter:brightness(1.08)}}
 </div>
 
 <div class="console" id="console">{logs_html}</div>
+<form id="cmd-form" style="display:flex;gap:8px;margin-top:10px">
+  <input id="cmd-input" placeholder="Type a command (e.g. /help, /say hello, /save-all)" style="flex:1;background:#07090c;border:1px solid #ffffff22;border-radius:8px;padding:8px 12px;color:var(--fg);font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.82rem">
+  <button type="submit">Send</button>
+</form>
 
 <div class="meta">
   <span>Pod: <code id="pod">{esc(POD)}</code></span>
@@ -207,6 +237,23 @@ document.getElementById('copy-btn').onclick = async () => {{
   btn.textContent = 'Copied!';
   setTimeout(() => btn.textContent = 'Copy Address', 1500);
 }};
+document.getElementById('cmd-form').onsubmit = async e => {{
+  e.preventDefault();
+  const inp = document.getElementById('cmd-input');
+  const cmd = inp.value.trim();
+  if (!cmd) return;
+  inp.value = '';
+  try {{
+    await fetch('/command', {{method: 'POST', headers: {{'Content-Type': 'application/json'}}, body: JSON.stringify({{command: cmd}})}});
+    const r = await fetch('/status.json', {{cache: 'no-store'}});
+    if (r.ok) {{
+      const d = await r.json();
+      const con = document.getElementById('console');
+      con.innerHTML = d.logs.map(l => `<div>${{l.replace(/[<>&]/g, c => ({{'<':'&lt;','>':'&gt;','&':'&amp;'}}[c]))}}</div>`).join('');
+      con.scrollTop = con.scrollHeight;
+    }}
+  }} catch (err) {{}}
+}};
 setInterval(async () => {{
   try {{
     const r = await fetch('/status.json', {{cache: 'no-store'}});
@@ -219,6 +266,8 @@ setInterval(async () => {{
     document.getElementById('cpu').textContent = `${{d.cpu_pct}}% · ${{d.tps}}`;
     document.getElementById('uptime').textContent = fmtUp(d.uptime_s);
     document.getElementById('motd').textContent = d.motd;
+    const con = document.getElementById('console');
+    con.innerHTML = d.logs.map(l => `<div>${{l.replace(/[<>&]/g, c => ({{'<':'&lt;','>':'&gt;','&':'&amp;'}}[c]))}}</div>`).join('');
   }} catch (e) {{}}
 }}, 3000);
 </script>
@@ -240,6 +289,15 @@ class Handler(BaseHTTPRequestHandler):
             self._send(200, "ok", "text/plain")
         elif self.path == "/status.json":
             self._send(200, json.dumps(status()), "application/json")
+        elif self.path == "/metrics":
+            s = status()
+            body = (
+                f"freekube_gameserver_players {s['players']}\n"
+                f"freekube_gameserver_max_players {s['max_players']}\n"
+                f"freekube_gameserver_ram_used_mb {s['ram_used_mb']}\n"
+                f"freekube_gameserver_uptime_seconds {s['uptime_s']}\n"
+            )
+            self._send(200, body, "text/plain; version=0.0.4; charset=utf-8")
         elif self.path in ("/", "/index.html"):
             host = (self.headers.get("Host") or "localhost").split(":")[0]
             self._send(200, page(host), "text/html; charset=utf-8")
@@ -250,6 +308,15 @@ class Handler(BaseHTTPRequestHandler):
         if self.path == "/stress":
             threading.Thread(target=_burn_cpu, args=(20,), daemon=True).start()
             self._send(202, json.dumps({"ok": True, "duration_s": 20}), "application/json")
+        elif self.path == "/command":
+            length = int(self.headers.get("Content-Length") or 0)
+            raw = self.rfile.read(min(length, 2048))
+            try:
+                cmd = json.loads(raw.decode()).get("command", "")
+            except Exception:
+                cmd = ""
+            reply = _run_command(str(cmd)[:120])
+            self._send(200, json.dumps({"reply": reply}), "application/json")
         else:
             self._send(404, "not found", "text/plain")
 

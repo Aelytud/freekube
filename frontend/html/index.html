@@ -211,6 +211,7 @@ button:disabled{opacity:.48;cursor:not-allowed}
 .badge i{width:7px;height:7px;border-radius:50%;background:currentColor}
 .s-running{background:rgba(94,224,98,.14);color:var(--accent);border:1px solid rgba(94,224,98,.3)}
 .s-provisioning,.s-deleting{background:rgba(245,158,11,.15);color:var(--warn);border:1px solid rgba(245,158,11,.35)}
+.s-stopped{background:rgba(148,163,184,.14);color:var(--dim);border:1px solid rgba(148,163,184,.3)}
 .s-failed{background:rgba(251,113,133,.15);color:var(--err);border:1px solid rgba(251,113,133,.35)}
 .srv-err{color:var(--err);font-size:.84rem;margin-top:6px}
 
@@ -312,6 +313,7 @@ footer{
         <p>Launch a dedicated Minecraft, Satisfactory, Valheim, or Terraria server in seconds. Each server gets its own Kubernetes Pod, Service, and TLS Route — free for 24 hours and renewable with one click.</p>
         <div class="hero-actions">
           <button class="primary" id="cta">Deploy Free Server</button>
+          <button id="btn-demo">Try Instant Demo</button>
           <button class="ghost" onclick="document.getElementById('games-sec').scrollIntoView()">Browse Catalog</button>
         </div>
       </div>
@@ -366,6 +368,11 @@ footer{
     </div>
   </div>
 
+  <!-- PUBLIC SHARE VIEW -->
+  <section id="public-view" class="hidden" style="padding:48px 0">
+    <div class="card" id="public-card" style="max-width:640px;margin:0 auto">Loading shared server...</div>
+  </section>
+
   <!-- DASHBOARD -->
   <section id="dash" class="hidden">
     <div class="dash-top">
@@ -386,6 +393,9 @@ footer{
       <h2>Deploy a New Server</h2>
       <div class="sub">Provisioned asynchronously by the OpenShift worker in a few seconds.</div>
       <form id="create-form">
+        <span class="pick-label">Quick Presets (optional)</span>
+        <div class="tags" id="pick-presets" style="margin-bottom:6px"></div>
+
         <span class="pick-label">1. Select Game</span>
         <div class="pick-grid" id="pick-games"></div>
 
@@ -437,6 +447,7 @@ footer{
     <div class="msg" id="auth-msg" role="alert"></div>
     <div class="dlg-actions">
       <button class="primary" type="submit" id="auth-submit">Log in</button>
+      <button type="button" id="auth-demo">Instant Demo</button>
       <button type="button" id="auth-cancel">Cancel</button>
       <button type="button" id="auth-switch" class="link"></button>
     </div>
@@ -454,8 +465,16 @@ footer{
   </div>
 
   <form id="manage-form">
-    <label for="m-name">Server Name</label>
-    <input id="m-name" required minlength="3" maxlength="32" pattern="[A-Za-z0-9 _\-]{3,32}">
+    <div style="display:grid;grid-template-columns:1.4fr 1fr;gap:12px">
+      <div>
+        <label for="m-name">Server Name</label>
+        <input id="m-name" required minlength="3" maxlength="32" pattern="[A-Za-z0-9 _\-]{3,32}">
+      </div>
+      <div>
+        <label for="m-plan">Resource Plan</label>
+        <select id="m-plan"></select>
+      </div>
+    </div>
     <label for="m-motd">Message of the Day (MOTD)</label>
     <input id="m-motd" maxlength="120">
     <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-top:14px;padding:10px 12px;border-radius:10px;background:var(--bg);border:1px solid var(--line)">
@@ -472,14 +491,29 @@ footer{
     </div>
     <div class="dlg-actions">
       <button type="submit" class="primary sm">Save &amp; Apply</button>
+      <button type="button" class="sm" id="m-power">Stop Server</button>
       <button type="button" class="sm" id="m-restart">Rolling Restart</button>
       <button type="button" class="sm" id="m-renew">Renew 24h</button>
       <button type="button" class="danger sm" id="m-delete" style="margin-left:auto">Delete Server</button>
     </div>
   </form>
 
-  <div style="margin-top:18px;font-size:.86rem;font-weight:600;color:var(--dim)">Recent Activity Log</div>
+  <div style="display:flex;gap:8px;align-items:center;margin-top:18px">
+    <button type="button" class="sm" id="tab-events">Activity Log</button>
+    <button type="button" class="sm ghost" id="tab-logs">Pod Logs</button>
+    <button type="button" class="sm ghost hidden" id="btn-refresh-logs" style="margin-left:auto">Refresh Logs</button>
+  </div>
   <div class="events-list" id="m-events"><div style="color:var(--dim)">Loading events...</div></div>
+  <pre class="events-list hidden" id="m-logs" style="margin:10px 0 0;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.78rem;white-space:pre-wrap">Loading pod logs...</pre>
+</dialog>
+
+<!-- CLUSTER STATUS DIALOG -->
+<dialog id="cluster-dlg">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+    <h3 style="margin:0">Cluster System Status</h3>
+    <button type="button" class="sm" onclick="document.getElementById('cluster-dlg').close()">Close</button>
+  </div>
+  <div id="cluster-body" style="display:grid;gap:8px;font-size:.9rem">Loading...</div>
 </dialog>
 
 <div id="toasts" aria-live="polite"></div>
@@ -570,6 +604,11 @@ async function loadCatalog() {
       <button type="button" class="sm" data-launch-plan="${esc(p.id)}">Select ${esc(p.label)}</button>
     </div>`).join('');
 
+  $('#pick-presets').innerHTML = (catalog.presets || []).map(pr =>
+    `<button type="button" class="sm" data-preset="${esc(pr.id)}">${esc(pr.label)}</button>`).join('');
+  $('#m-plan').innerHTML = catalog.plans.map(p =>
+    `<option value="${esc(p.id)}">${esc(p.label)} (${p.ram_mb / 1024} GB)</option>`).join('');
+
   renderPickers();
 }
 
@@ -587,11 +626,15 @@ async function loadStats() {
 }
 
 function renderNav() {
+  const clusterBtn = `<button id="btn-cluster" class="ghost sm">System Status</button>`;
   $('#nav').innerHTML = me
-    ? `<span class="user-pill"><span class="user-dot"></span>${esc(me.email)}</span><button id="btn-logout" class="sm">Log out</button>`
-    : `<button id="btn-login" class="ghost sm">Log in</button><button id="btn-register" class="primary sm">Get a free server</button>`;
-  $('#landing').classList.toggle('hidden', !!me);
-  $('#dash').classList.toggle('hidden', !me);
+    ? `${clusterBtn}<span class="user-pill"><span class="user-dot"></span>${esc(me.email)}</span><button id="btn-logout" class="sm">Log out</button>`
+    : `${clusterBtn}<button id="btn-login" class="ghost sm">Log in</button><button id="btn-register" class="primary sm">Get a free server</button>`;
+  const isShare = location.hash.startsWith('#/s/');
+  $('#public-view').classList.toggle('hidden', !isShare);
+  $('#landing').classList.toggle('hidden', isShare || !!me);
+  $('#dash').classList.toggle('hidden', isShare || !me);
+  if ($('#btn-cluster')) $('#btn-cluster').onclick = openClusterStatus;
   if ($('#btn-logout')) $('#btn-logout').onclick = async () => {
     await api('/logout', 'POST'); me = null; clearTimeout(timer); renderNav(); loadStats();
     toast('Logged out');
@@ -658,18 +701,23 @@ async function loadServers() {
         <div class="srv-meta">
           <span>${esc(g?.label || s.game)} ${esc(g?.version || '')}</span>
           <span>&bull; ${esc(p?.label || s.plan)} (${p ? p.ram_mb / 1024 + ' GB' : ''})</span>
+          <span>&bull; ${esc(s.ready_replicas ?? 0)}/${esc(s.desired_replicas ?? 1)} pods</span>
           <span>&bull; ${esc(exp.text)}</span>
           ${s.k8s_name ? `<span>&bull; <code>${esc(s.k8s_name)}</code></span>` : ''}
         </div>
-        ${s.url ? `
+        ${s.url && s.status !== 'stopped' ? `
           <div class="srv-url-row">
             <a class="srv-url" href="${esc(s.url)}" target="_blank" rel="noopener">${esc(s.url)}</a>
             <button type="button" class="sm" data-copy="${esc(s.url)}">Copy URL</button>
             <a href="${esc(s.url)}" target="_blank" rel="noopener"><button type="button" class="sm">Open Console</button></a>
+            <button type="button" class="sm ghost" data-share="${esc(s.id)}">Share</button>
           </div>` : ''}
         ${s.error ? `<div class="srv-err">${esc(s.error)}</div>` : ''}
       </div>
       <div class="srv-actions">
+        ${s.status === 'stopped'
+          ? `<button type="button" class="primary sm" data-start="${esc(s.id)}">Start</button>`
+          : `<button type="button" class="sm" data-stop="${esc(s.id)}" ${s.status === 'deleting' ? 'disabled' : ''}>Stop</button>`}
         <button type="button" class="sm" data-manage="${esc(s.id)}" ${s.status === 'deleting' ? 'disabled' : ''}>Manage</button>
         <button type="button" class="sm" data-renew="${esc(s.id)}" ${s.status === 'deleting' ? 'disabled' : ''}>Renew 24h</button>
       </div>
@@ -684,6 +732,25 @@ async function loadServers() {
   timer = setTimeout(loadServers, busy ? 2500 : 12000);
 }
 
+async function loadPodLogs(refresh = false) {
+  if (!managingId) return;
+  $('#m-logs').textContent = 'Fetching pod logs...';
+  try {
+    const d = await api(`/servers/${managingId}/logs${refresh ? '?refresh=1' : ''}`);
+    $('#m-logs').textContent = (d.lines || []).join('\n');
+  } catch (e) { $('#m-logs').textContent = e.message; }
+}
+
+function setManageTab(tab) {
+  const isLogs = tab === 'logs';
+  $('#m-events').classList.toggle('hidden', isLogs);
+  $('#m-logs').classList.toggle('hidden', !isLogs);
+  $('#btn-refresh-logs').classList.toggle('hidden', !isLogs);
+  $('#tab-events').classList.toggle('ghost', isLogs);
+  $('#tab-logs').classList.toggle('ghost', !isLogs);
+  if (isLogs) loadPodLogs(false);
+}
+
 async function openManage(id) {
   const s = serversCache.find(x => x.id === id);
   if (!s) return;
@@ -691,14 +758,17 @@ async function openManage(id) {
   deleteConfirm = false;
   $('#m-delete').textContent = 'Delete Server';
   $('#m-title').textContent = s.name;
-  $('#m-sub').textContent = `${s.game} · ${s.plan} · ${s.k8s_name || ''}`;
+  $('#m-sub').textContent = `${s.game} · ${s.plan} · ${s.ready_replicas ?? 0}/${s.desired_replicas ?? 1} pods · ${s.k8s_name || ''}`;
   $('#m-name').value = s.name;
+  $('#m-plan').value = s.plan;
   $('#m-motd').value = s.motd || '';
   $('#m-autoscale').checked = !!s.autoscale;
   $('#m-min').value = String(s.min_replicas || 1);
   $('#m-max').value = String(s.max_replicas || 3);
   $('#m-scale-opts').classList.toggle('hidden', !s.autoscale);
+  $('#m-power').textContent = s.status === 'stopped' ? 'Start Server' : 'Stop Server';
   $('#m-restart').disabled = s.status !== 'running';
+  setManageTab('events');
   $('#m-events').innerHTML = '<div style="color:var(--dim)">Loading events...</div>';
   if (!$('#manage-dlg').open) $('#manage-dlg').showModal();
   try {
@@ -722,6 +792,24 @@ $('#servers').addEventListener('click', async e => {
     catch (err) { toast('Could not copy URL', true); }
     return;
   }
+  if (btn.dataset.share) {
+    const link = `${location.origin}/#/s/${btn.dataset.share}`;
+    try { await navigator.clipboard.writeText(link); toast('Shareable status link copied'); }
+    catch (err) { toast('Could not copy link', true); }
+    return;
+  }
+  if (btn.dataset.stop) {
+    try { await api(`/servers/${btn.dataset.stop}/stop`, 'POST'); toast('Stopping server (scaling to 0 pods)'); }
+    catch (err) { toast(err.message, true); }
+    loadServers();
+    return;
+  }
+  if (btn.dataset.start) {
+    try { await api(`/servers/${btn.dataset.start}/start`, 'POST'); toast('Starting server...'); }
+    catch (err) { toast(err.message, true); }
+    loadServers();
+    return;
+  }
   if (btn.dataset.manage) { openManage(btn.dataset.manage); return; }
   if (btn.dataset.renew) {
     try { await api('/servers/' + btn.dataset.renew + '/renew', 'POST'); toast('Server renewed for 24h'); }
@@ -731,6 +819,9 @@ $('#servers').addEventListener('click', async e => {
 });
 
 $('#m-close').onclick = () => $('#manage-dlg').close();
+$('#tab-events').onclick = () => setManageTab('events');
+$('#tab-logs').onclick = () => setManageTab('logs');
+$('#btn-refresh-logs').onclick = () => loadPodLogs(true);
 $('#c-autoscale').onchange = e => $('#c-scale-opts').classList.toggle('hidden', !e.target.checked);
 $('#m-autoscale').onchange = e => $('#m-scale-opts').classList.toggle('hidden', !e.target.checked);
 $('#manage-form').addEventListener('submit', async e => {
@@ -739,6 +830,7 @@ $('#manage-form').addEventListener('submit', async e => {
   try {
     await api(`/servers/${managingId}`, 'PATCH', {
       name: $('#m-name').value,
+      plan: $('#m-plan').value,
       motd: $('#m-motd').value,
       autoscale: $('#m-autoscale').checked,
       min_replicas: Number($('#m-min').value),
@@ -749,6 +841,17 @@ $('#manage-form').addEventListener('submit', async e => {
     loadServers();
   } catch (err) { toast(err.message, true); }
 });
+$('#m-power').onclick = async () => {
+  if (!managingId) return;
+  const s = serversCache.find(x => x.id === managingId);
+  const op = s?.status === 'stopped' ? 'start' : 'stop';
+  try {
+    await api(`/servers/${managingId}/${op}`, 'POST');
+    toast(op === 'stop' ? 'Server stopping (0 pods)' : 'Server starting');
+    $('#manage-dlg').close();
+    loadServers();
+  } catch (err) { toast(err.message, true); }
+};
 $('#m-restart').onclick = async () => {
   if (!managingId) return;
   try {
@@ -784,8 +887,24 @@ $('#m-delete').onclick = async () => {
 $('#create-panel').addEventListener('click', e => {
   const gBtn = e.target.closest('[data-pick-game]');
   const pBtn = e.target.closest('[data-pick-plan]');
+  const prBtn = e.target.closest('[data-preset]');
   if (gBtn) { selectedGame = gBtn.dataset.pickGame; renderPickers(); }
   if (pBtn) { selectedPlan = pBtn.dataset.pickPlan; renderPickers(); }
+  if (prBtn) {
+    const pr = (catalog?.presets || []).find(x => x.id === prBtn.dataset.preset);
+    if (pr) {
+      selectedGame = pr.game;
+      selectedPlan = pr.plan;
+      $('#c-name').value = pr.name;
+      $('#c-motd').value = pr.motd;
+      $('#c-autoscale').checked = !!pr.autoscale;
+      $('#c-min').value = String(pr.min_replicas || 1);
+      $('#c-max').value = String(pr.max_replicas || 3);
+      $('#c-scale-opts').classList.toggle('hidden', !pr.autoscale);
+      renderPickers();
+      toast(`Preset "${pr.label}" applied`);
+    }
+  }
 });
 
 $('#create-form').addEventListener('submit', async e => {
@@ -831,8 +950,58 @@ function openAuth(m) {
   $('#auth-msg').textContent = '';
   if (!$('#auth').open) $('#auth').showModal();
 }
+async function startDemo() {
+  try {
+    await api('/demo', 'POST');
+    me = await api('/me');
+    if ($('#auth').open) $('#auth').close();
+    renderNav(); renderPickers(); loadServers();
+    toast('Demo session started (2 free server slots)');
+  } catch (err) { toast(err.message, true); }
+}
+
+async function openClusterStatus() {
+  if (!$('#cluster-dlg').open) $('#cluster-dlg').showModal();
+  $('#cluster-body').innerHTML = '<div style="color:var(--dim)">Querying cluster health...</div>';
+  try {
+    const c = await api('/cluster');
+    const pill = v => `<span class="tag ${v === 'healthy' || v === 'online' ? 'free' : ''}">${esc(v)}</span>`;
+    $('#cluster-body').innerHTML = `
+      <div style="display:flex;justify-content:space-between"><span>PostgreSQL</span>${pill(c.postgres)}</div>
+      <div style="display:flex;justify-content:space-between"><span>Redis (Sessions &amp; Queue)</span>${pill(c.redis)}</div>
+      <div style="display:flex;justify-content:space-between"><span>K8s Worker</span>${pill(c.worker)}</div>
+      <div style="display:flex;justify-content:space-between"><span>Pending Queue Jobs</span><b>${esc(c.queue_depth)}</b></div>
+      ${c.worker_heartbeat ? `<div style="font-size:.78rem;color:var(--dim);margin-top:4px">Last worker heartbeat: ${esc(c.worker_heartbeat)}</div>` : ''}
+    `;
+  } catch (err) { $('#cluster-body').innerHTML = `<div style="color:var(--err)">${esc(err.message)}</div>`; }
+}
+
+async function loadPublicShare() {
+  if (!location.hash.startsWith('#/s/')) return;
+  const id = location.hash.slice(4);
+  try {
+    const s = await api('/public/servers/' + encodeURIComponent(id));
+    $('#public-card').innerHTML = `
+      <div class="srv-title">${ICONS[s.game] || ''}<h2 style="margin:0">${esc(s.name)}</h2><span class="badge s-${esc(s.status)}"><i></i>${esc(s.status)}</span></div>
+      <p style="margin:6px 0 0">${esc(s.motd || '')}</p>
+      <div class="srv-meta" style="margin-top:10px">
+        <span>${esc(s.game)} &bull; ${esc(s.plan)}</span>
+        <span>&bull; ${esc(s.ready_replicas ?? 0)}/${esc(s.desired_replicas ?? 1)} pods</span>
+        <span>&bull; ${esc(fmtExpiry(s.expires_at).text)}</span>
+      </div>
+      ${s.url ? `<div class="srv-url-row"><a class="srv-url" href="${esc(s.url)}" target="_blank" rel="noopener">${esc(s.url)}</a><a href="${esc(s.url)}" target="_blank" rel="noopener"><button type="button" class="primary sm">Open Live Console</button></a></div>` : ''}
+      <div style="margin-top:14px"><a href="#"><button type="button" class="sm ghost">&larr; Back to FreeKube</button></a></div>
+    `;
+  } catch (e) {
+    $('#public-card').innerHTML = `<h3>Server not found</h3><p>This shared server may have expired or been deleted.</p><a href="#"><button type="button" class="sm">Back to FreeKube</button></a>`;
+  }
+}
+window.addEventListener('hashchange', () => { renderNav(); loadPublicShare(); });
+
 $('#auth-cancel').onclick = () => $('#auth').close();
 $('#auth-switch').onclick = () => openAuth(mode === 'login' ? 'register' : 'login');
+$('#auth-demo').onclick = startDemo;
+$('#btn-demo').onclick = startDemo;
 $('#cta').onclick = () => openAuth('register');
 $('#btn-refresh').onclick = () => { loadServers(); toast('Refreshed'); };
 
@@ -850,7 +1019,7 @@ $('#auth-form').addEventListener('submit', async e => {
 (async () => {
   try { await loadCatalog(); } catch (e) {}
   try { me = await api('/me'); } catch (e) { me = null; }
-  renderNav(); loadStats(); loadServers();
+  renderNav(); loadStats(); loadServers(); loadPublicShare();
 })();
 </script>
 </body>
