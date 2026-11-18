@@ -1,6 +1,7 @@
-"""Minimaler Kubernetes/OpenShift Client, nur requests + ServiceAccount Token.
+"""Minimal Kubernetes/OpenShift client using requests and the ServiceAccount token.
 
-Der Worker nutzt das, um Gameserver (Deployment + Service + Route) anzulegen.
+Used by the worker and maintenance job to manage game server resources
+(Deployment + Service + Route).
 """
 import os
 import requests
@@ -30,6 +31,7 @@ PATHS = {
     "deployments": "/apis/apps/v1/namespaces/{ns}/deployments",
     "services": "/api/v1/namespaces/{ns}/services",
     "routes": "/apis/route.openshift.io/v1/namespaces/{ns}/routes",
+    "hpas": "/apis/autoscaling/v2/namespaces/{ns}/horizontalpodautoscalers",
 }
 
 
@@ -40,7 +42,29 @@ def _url(kind, name=""):
 
 def create(kind, body):
     r = _session().post(_url(kind), json=body, timeout=10)
-    if r.status_code not in (200, 201, 409):  # 409 = gibts schon, ist ok (idempotent)
+    if r.status_code not in (200, 201, 409):  # 409 = already exists (idempotent)
+        r.raise_for_status()
+
+
+def patch_deployment(name, body):
+    r = _session().patch(
+        _url("deployments", name),
+        json=body,
+        headers={"Content-Type": "application/strategic-merge-patch+json"},
+        timeout=10,
+    )
+    if r.status_code != 404:
+        r.raise_for_status()
+
+
+def patch(kind, name, body):
+    r = _session().patch(
+        _url(kind, name),
+        json=body,
+        headers={"Content-Type": "application/strategic-merge-patch+json"},
+        timeout=10,
+    )
+    if r.status_code != 404:
         r.raise_for_status()
 
 
@@ -74,13 +98,31 @@ def deployment_ready(name):
     return bool(d and (d.get("status", {}).get("availableReplicas") or 0) >= 1)
 
 
+def _server_env(server, game, plan):
+    return [
+        {"name": "GAME", "value": server["game"]},
+        {"name": "GAME_LABEL", "value": game["label"]},
+        {"name": "GAME_VERSION", "value": game["version"]},
+        {"name": "GAME_PORT", "value": str(game["port"])},
+        {"name": "SERVER_NAME", "value": server["name"]},
+        {"name": "MOTD", "value": server.get("motd") or game["default_motd"]},
+        {"name": "MAX_SLOTS", "value": str(plan["slots"])},
+        {"name": "RAM_MB", "value": str(plan["ram_mb"])},
+    ]
+
+
 def manifests(server, game, plan):
-    """Baut Deployment, Service, Route fuer einen (Fake-)Gameserver."""
+    """Build Deployment, Service, and Route manifests for a (fake) game server."""
     name = server["k8s_name"]
-    labels = {"app": name, "hoster-role": "gameserver", "hoster-server-id": str(server["id"]),
-              "app.kubernetes.io/part-of": "freekube"}
+    labels = {
+        "app": name,
+        "hoster-role": "gameserver",
+        "hoster-server-id": str(server["id"]),
+        "app.kubernetes.io/part-of": "freekube",
+    }
     deployment = {
-        "apiVersion": "apps/v1", "kind": "Deployment",
+        "apiVersion": "apps/v1",
+        "kind": "Deployment",
         "metadata": {"name": name, "labels": labels},
         "spec": {
             "replicas": 1,
@@ -89,38 +131,87 @@ def manifests(server, game, plan):
                 "metadata": {"labels": labels},
                 "spec": {
                     "securityContext": {"seccompProfile": {"type": "RuntimeDefault"}},
-                    "containers": [{
-                        "name": "gameserver",
-                        "image": GS_IMAGE,
-                        "imagePullPolicy": "Always",
-                        "ports": [{"containerPort": 8080}],
-                        "env": [
-                            {"name": "GAME", "value": server["game"]},
-                            {"name": "GAME_LABEL", "value": game["label"]},
-                            {"name": "GAME_VERSION", "value": game["version"]},
-                            {"name": "GAME_PORT", "value": str(game["port"])},
-                            {"name": "SERVER_NAME", "value": server["name"]},
-                            {"name": "MAX_SLOTS", "value": str(plan["slots"])},
-                            {"name": "RAM_MB", "value": str(plan["ram_mb"])},
-                        ],
-                        "readinessProbe": {"httpGet": {"path": "/healthz", "port": 8080}, "periodSeconds": 3},
-                        "livenessProbe": {"httpGet": {"path": "/healthz", "port": 8080}, "initialDelaySeconds": 10},
-                        "resources": {"requests": plan["k8s"]["req"], "limits": plan["k8s"]["lim"]},
-                        "securityContext": {"allowPrivilegeEscalation": False, "capabilities": {"drop": ["ALL"]}},
-                    }],
+                    "containers": [
+                        {
+                            "name": "gameserver",
+                            "image": GS_IMAGE,
+                            "imagePullPolicy": "Always",
+                            "ports": [{"containerPort": 8080}],
+                            "env": _server_env(server, game, plan),
+                            "readinessProbe": {"httpGet": {"path": "/healthz", "port": 8080}, "periodSeconds": 3},
+                            "livenessProbe": {
+                                "httpGet": {"path": "/healthz", "port": 8080},
+                                "initialDelaySeconds": 10,
+                            },
+                            "resources": {"requests": plan["k8s"]["req"], "limits": plan["k8s"]["lim"]},
+                            "securityContext": {
+                                "allowPrivilegeEscalation": False,
+                                "capabilities": {"drop": ["ALL"]},
+                            },
+                        }
+                    ],
                 },
             },
         },
     }
     service = {
-        "apiVersion": "v1", "kind": "Service",
+        "apiVersion": "v1",
+        "kind": "Service",
         "metadata": {"name": name, "labels": labels},
         "spec": {"selector": {"app": name}, "ports": [{"port": 8080, "targetPort": 8080}]},
     }
     route = {
-        "apiVersion": "route.openshift.io/v1", "kind": "Route",
+        "apiVersion": "route.openshift.io/v1",
+        "kind": "Route",
         "metadata": {"name": name, "labels": labels},
-        "spec": {"to": {"kind": "Service", "name": name}, "port": {"targetPort": 8080},
-                 "tls": {"termination": "edge", "insecureEdgeTerminationPolicy": "Redirect"}},
+        "spec": {
+            "to": {"kind": "Service", "name": name},
+            "port": {"targetPort": 8080},
+            "tls": {"termination": "edge", "insecureEdgeTerminationPolicy": "Redirect"},
+        },
     }
     return deployment, service, route
+
+
+def hpa_manifest(server):
+    """Build an autoscaling/v2 HorizontalPodAutoscaler for a game server Deployment."""
+    name = server["k8s_name"]
+    labels = {
+        "app": name,
+        "hoster-role": "gameserver",
+        "hoster-server-id": str(server["id"]),
+        "app.kubernetes.io/part-of": "freekube",
+    }
+    return {
+        "apiVersion": "autoscaling/v2",
+        "kind": "HorizontalPodAutoscaler",
+        "metadata": {"name": name, "labels": labels},
+        "spec": {
+            "scaleTargetRef": {"apiVersion": "apps/v1", "kind": "Deployment", "name": name},
+            "minReplicas": int(server.get("min_replicas") or 1),
+            "maxReplicas": int(server.get("max_replicas") or 3),
+            "metrics": [
+                {
+                    "type": "Resource",
+                    "resource": {"name": "cpu", "target": {"type": "Utilization", "averageUtilization": 60}},
+                }
+            ],
+            "behavior": {
+                "scaleDown": {"stabilizationWindowSeconds": 60},
+            },
+        },
+    }
+
+
+def sync_hpa(server):
+    """Create, update, or remove the HorizontalPodAutoscaler for a game server."""
+    name = server["k8s_name"]
+    if server.get("autoscale"):
+        body = hpa_manifest(server)
+        if get("hpas", name):
+            patch("hpas", name, {"spec": body["spec"]})
+        else:
+            create("hpas", body)
+    else:
+        delete("hpas", name)
+        patch_deployment(name, {"spec": {"replicas": 1}})

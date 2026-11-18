@@ -1,5 +1,5 @@
-# Redis: Sessions, Cache, Job-Queue, Rate Limits. Bewusst ohne Persistenz.
-# Faellt Redis aus: User muessen sich neu einloggen, der Maintenance-Job stellt verlorene Jobs wieder her.
+# Redis: sessions, cache, job queue, rate limits. Intentionally without persistence.
+# If Redis goes down: users have to log in again, and the maintenance job recovers lost jobs.
 apiVersion: v1
 kind: Service
 metadata:

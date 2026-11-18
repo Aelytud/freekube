@@ -1,4 +1,4 @@
-# Erst alles zu, dann nur das Noetige auf. Egress bleibt offen.
+# Default deny all ingress, then allow only what is needed. Egress remains open.
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata: {name: default-deny-ingress}

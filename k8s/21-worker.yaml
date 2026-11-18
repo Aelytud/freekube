@@ -6,7 +6,6 @@ metadata:
   annotations:
     image.openshift.io/triggers: '[{"from":{"kind":"ImageStreamTag","name":"freekube-api:latest"},"fieldPath":"spec.template.spec.containers[?(@.name==\"worker\")].image"}]'
 spec:
-  replicas: 2
   selector: {matchLabels: {app: worker}}
   template:
     metadata:
@@ -32,3 +31,25 @@ spec:
         resources:
           requests: {cpu: 50m, memory: 96Mi}
           limits: {cpu: 300m, memory: 192Mi}
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: worker
+  labels: {app.kubernetes.io/part-of: freekube}
+spec:
+  scaleTargetRef: {apiVersion: apps/v1, kind: Deployment, name: worker}
+  minReplicas: 2
+  maxReplicas: 6
+  metrics:
+  - type: Resource
+    resource: {name: cpu, target: {type: Utilization, averageUtilization: 70}}
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: worker
+  labels: {app.kubernetes.io/part-of: freekube}
+spec:
+  minAvailable: 1
+  selector: {matchLabels: {app: worker}}

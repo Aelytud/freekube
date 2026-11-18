@@ -1,12 +1,12 @@
-"""Gemeinsamer Kram fuer API, Worker und Maintenance.
+"""Shared utilities for API, Worker, and Maintenance.
 
-Die Prozesse halten selbst KEINEN State. Alles liegt in Postgres (dauerhaft)
-oder Redis (Sessions, Cache, Job-Queue).
+All processes are stateless. Persistent data lives in Postgres and ephemeral
+state (sessions, cache, job queue, rate limits) lives in Redis.
 """
 import json
+import logging
 import os
 import time
-import logging
 from contextlib import contextmanager
 
 import psycopg2
@@ -24,28 +24,105 @@ MAX_SERVERS_PER_USER = int(os.environ.get("MAX_SERVERS_PER_USER", "2"))
 SERVER_TTL_HOURS = int(os.environ.get("SERVER_TTL_HOURS", "24"))
 QUEUE = "jobs"
 
-# ---------------------------------------------------------------- Katalog
+# ----------------------------------------------------------------- Catalog
 GAMES = {
-    "minecraft": {"label": "Minecraft (Java)", "port": 25565, "version": "1.21.4"},
-    "satisfactory": {"label": "Satisfactory", "port": 7777, "version": "1.0"},
+    "minecraft": {
+        "label": "Minecraft (Java)",
+        "port": 25565,
+        "version": "1.21.4",
+        "accent": "#5ee062",
+        "description": "High-tickrate PaperMC & vanilla worlds with instant TLS status console.",
+        "tags": ["PaperMC", "Mod-ready", "Crossplay"],
+        "default_motd": "Creepers are friends, not food.",
+    },
+    "satisfactory": {
+        "label": "Satisfactory",
+        "port": 7777,
+        "version": "1.0",
+        "accent": "#f59e0b",
+        "description": "Dedicated FICSIT pioneer servers built for massive belt & train megafactories.",
+        "tags": ["Dedicated", "Auto-Save", "Co-op"],
+        "default_motd": "The factory must grow.",
+    },
+    "valheim": {
+        "label": "Valheim",
+        "port": 2456,
+        "version": "0.219.16",
+        "accent": "#38bdf8",
+        "description": "Persistent Viking realms with low-latency exploration and boss progression.",
+        "tags": ["Vikings", "Always-On", "Co-op"],
+        "default_motd": "Odin awaits in the Tenth World.",
+    },
+    "terraria": {
+        "label": "Terraria",
+        "port": 7777,
+        "version": "1.4.4.9",
+        "accent": "#c084fc",
+        "description": "Classic 2D sandbox worlds with tShock-ready configuration and fast restarts.",
+        "tags": ["tShock", "2D Sandbox", "Classic"],
+        "default_motd": "Dig, fight, explore, build!",
+    },
 }
+
 PLANS = {
-    "starter": {"label": "Starter", "ram_mb": 2048, "slots": 10,
-                "k8s": {"req": {"cpu": "10m", "memory": "32Mi"}, "lim": {"cpu": "100m", "memory": "96Mi"}}},
-    "standard": {"label": "Standard", "ram_mb": 4096, "slots": 20,
-                 "k8s": {"req": {"cpu": "20m", "memory": "48Mi"}, "lim": {"cpu": "200m", "memory": "128Mi"}}},
+    "starter": {
+        "label": "Starter",
+        "ram_mb": 2048,
+        "slots": 10,
+        "vcpu": 1,
+        "description": "Great for small friend groups and private survival worlds.",
+        "k8s": {"req": {"cpu": "10m", "memory": "32Mi"}, "lim": {"cpu": "100m", "memory": "96Mi"}},
+    },
+    "standard": {
+        "label": "Standard",
+        "ram_mb": 4096,
+        "slots": 20,
+        "vcpu": 2,
+        "description": "Balanced headroom for modded packs and busy co-op sessions.",
+        "k8s": {"req": {"cpu": "20m", "memory": "48Mi"}, "lim": {"cpu": "200m", "memory": "128Mi"}},
+    },
+    "plus": {
+        "label": "Plus",
+        "ram_mb": 6144,
+        "slots": 32,
+        "vcpu": 2,
+        "description": "Maximum free-tier memory for large worlds and heavy factory builds.",
+        "k8s": {"req": {"cpu": "25m", "memory": "64Mi"}, "lim": {"cpu": "250m", "memory": "160Mi"}},
+    },
 }
 
 
 def public_catalog():
     return {
-        "games": [{"id": k, "label": v["label"], "version": v["version"]} for k, v in GAMES.items()],
-        "plans": [{"id": k, "label": v["label"], "ram_mb": v["ram_mb"], "slots": v["slots"]} for k, v in PLANS.items()],
+        "games": [
+            {
+                "id": k,
+                "label": v["label"],
+                "version": v["version"],
+                "port": v["port"],
+                "accent": v["accent"],
+                "description": v["description"],
+                "tags": v["tags"],
+                "default_motd": v["default_motd"],
+            }
+            for k, v in GAMES.items()
+        ],
+        "plans": [
+            {
+                "id": k,
+                "label": v["label"],
+                "ram_mb": v["ram_mb"],
+                "slots": v["slots"],
+                "vcpu": v["vcpu"],
+                "description": v["description"],
+            }
+            for k, v in PLANS.items()
+        ],
         "limits": {"max_servers": MAX_SERVERS_PER_USER, "ttl_hours": SERVER_TTL_HOURS},
     }
 
 
-# ------------------------------------------------------------------ Redis
+# ------------------------------------------------------------------- Redis
 _redis = None
 
 
@@ -57,7 +134,7 @@ def rds():
 
 
 def cached(key, ttl, fn):
-    """Read-through Cache. Wenn Redis zickt, einfach ohne Cache weiter."""
+    """Read-through cache. Falls back to direct execution if Redis is unavailable."""
     try:
         hit = rds().get(key)
         if hit is not None:
@@ -83,13 +160,13 @@ def enqueue(op, server_id):
     rds().rpush(QUEUE, json.dumps({"op": op, "id": str(server_id)}))
 
 
-# --------------------------------------------------------------- Postgres
+# ---------------------------------------------------------------- Postgres
 _pool = None
 
 
 def _get_pool():
     global _pool
-    if _pool is None:  # lazy, damit es nach dem gunicorn-fork pro Prozess passiert
+    if _pool is None:  # lazy init so each gunicorn worker creates its own pool after fork
         _pool = psycopg2.pool.ThreadedConnectionPool(1, 8, DATABASE_URL)
     return _pool
 
@@ -110,7 +187,7 @@ def db():
 
 
 def q(sql, args=()):
-    """Kurzform: fuehrt aus, liefert Zeilen bei SELECT/RETURNING."""
+    """Execute a query and return rows for SELECT/RETURNING statements."""
     with db() as cur:
         cur.execute(sql, args)
         return cur.fetchall() if cur.description else None
@@ -132,18 +209,34 @@ CREATE TABLE IF NOT EXISTS servers (
   status text NOT NULL,
   k8s_name text NOT NULL,
   url text,
+  motd text,
+  autoscale boolean NOT NULL DEFAULT false,
+  min_replicas int NOT NULL DEFAULT 1,
+  max_replicas int NOT NULL DEFAULT 3,
   error text,
   created_at timestamptz NOT NULL DEFAULT now(),
   updated_at timestamptz NOT NULL DEFAULT now(),
   expires_at timestamptz NOT NULL
 );
+ALTER TABLE servers ADD COLUMN IF NOT EXISTS motd text;
+ALTER TABLE servers ADD COLUMN IF NOT EXISTS autoscale boolean NOT NULL DEFAULT false;
+ALTER TABLE servers ADD COLUMN IF NOT EXISTS min_replicas int NOT NULL DEFAULT 1;
+ALTER TABLE servers ADD COLUMN IF NOT EXISTS max_replicas int NOT NULL DEFAULT 3;
 CREATE INDEX IF NOT EXISTS servers_user_idx ON servers(user_id);
 CREATE INDEX IF NOT EXISTS servers_status_idx ON servers(status);
+CREATE TABLE IF NOT EXISTS server_events (
+  id serial PRIMARY KEY,
+  server_id uuid NOT NULL REFERENCES servers(id) ON DELETE CASCADE,
+  event_type text NOT NULL,
+  message text NOT NULL,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS server_events_sid_idx ON server_events(server_id, created_at DESC);
 """
 
 
 def ensure_schema(retries=30):
-    """Idempotent, mit Advisory Lock, damit mehrere Replicas sich nicht ins Gehege kommen."""
+    """Idempotent schema setup guarded by an advisory lock for multi-replica safety."""
     for attempt in range(retries):
         try:
             with db() as cur:
@@ -156,13 +249,24 @@ def ensure_schema(retries=30):
     raise RuntimeError("database never became ready")
 
 
+def record_event(server_id, event_type, message):
+    """Append an audit/activity event for a server."""
+    try:
+        q(
+            "INSERT INTO server_events(server_id, event_type, message) VALUES (%s, %s, %s)",
+            (str(server_id), event_type, message[:300]),
+        )
+    except Exception:  # noqa
+        log.warning("failed to record event for %s", server_id)
+
+
 def serialize(row):
-    """Row -> JSON-faehiges dict."""
+    """Convert a database row into a JSON-serializable dict."""
     out = {}
     for k, v in row.items():
         if hasattr(v, "isoformat"):
             v = v.isoformat()
-        elif k == "id" and v is not None:
+        elif k in ("id", "server_id") and v is not None:
             v = str(v)
         out[k] = v
     return out

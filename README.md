@@ -1,108 +1,106 @@
-> **This is just an example project to use for OpenShift testing.**
-> It is not a real game server hoster. The "game servers" are small web pages pretending to be Minecraft or Satisfactory servers.
-> Do not use it in production: no email verification, no password reset, single Postgres, Redis without persistence.
-> Everything here exists to try out Deployments, StatefulSets, CronJobs, Routes, NetworkPolicies, RBAC, HPA, Builds and GitOps on a test cluster.
+> **This is an example project for OpenShift testing.**
+> It is not a real game server hoster. The "game servers" are small stateless web pages pretending to be Minecraft, Satisfactory, Valheim, or Terraria servers.
+> Do not use it in production: no email verification, no password reset, single Postgres instance, Redis without persistence.
+> Everything here exists to try out Deployments, StatefulSets, CronJobs, Routes, NetworkPolicies, RBAC, HPA, Builds, and GitOps on a test cluster.
 
-# FreeKube: fake free game server hoster auf OpenShift
+# FreeKube: Fake Free Game Server Hoster on OpenShift
 
-Shopseite + Backend, das User und "Gameserver" verwaltet. Die Gameserver sind kleine
-Webseiten, die so tun als waeren sie Minecraft/Satisfactory Server. Das Backend legt sie
-zur Laufzeit als echte Deployments + Services + Routes im Cluster an.
+Storefront + backend API + worker that manages users and simulated "game servers". Each game server is a live, auto-refreshing status & console web page provisioned at runtime as a real **Deployment + Service + TLS Route** in the cluster.
 
-```
-Browser -> Route (TLS) -> frontend (nginx, 2+ Pods, Cache fuer /api/catalog + /api/stats)
+```text
+Browser -> Route (TLS) -> frontend (nginx, 2+ Pods, caches /api/catalog + /api/stats)
                               |
                               v /api
-                           api (Flask, 2-6 Pods per HPA)  --enqueue-->  Redis (Sessions, Cache, Queue, Rate Limits)
-                              |                                              |
-                              v                                              v blpop
-                          Postgres (StatefulSet+PVC)  <----------------  worker (2+ Pods, ServiceAccount mit RBAC)
-                                                                             |  Kubernetes API
-                                                    maintenance (CronJob)    v
-                                                    Ablauf, Requeue,      gs-xxxx Deployment + Service + Route
-                                                    Waisen aufraeumen     (pro User-Server, eigene Route)
+                           api (Flask, 2-6 Pods via HPA) --enqueue--> Redis (Sessions, Cache, Queue, Rate Limits)
+                              |                                             |
+                              v                                             v blpop
+                          Postgres (StatefulSet + PVC) <---------------- worker (2+ Pods, ServiceAccount with RBAC)
+                                                                            |  Kubernetes API
+                                                   maintenance (CronJob)    v
+                                                   Expiry, Requeue,      gs-xxxx Deployment + Service + Route
+                                                   Orphan cleanup        (per user server, dedicated Route)
 ```
 
-## Stateless?
-- api, worker, frontend, gameserver halten keinen lokalen State. Beliebig skalierbar, jederzeit killbar.
-- Sessions, Cache, Job-Queue, Rate Limits: Redis (bewusst ohne Persistenz).
-- Dauerhafte Daten (users, servers): Postgres. Das ist die einzige stateful Komponente.
+## Features
+- **Catalog & Plans**: Minecraft (Java), Satisfactory, Valheim, and Terraria across Starter (2 GB), Standard (4 GB), and Plus (6 GB) free plans.
+- **Live Provisioning**: Asynchronous Kubernetes resource creation (`Deployment`, `Service`, `Route`) via Redis queue & worker pods.
+- **Server Management**: Rename servers, customize MOTD, toggle **Kubernetes HPA Autoscaling** (min/max pod replicas), trigger rolling pod restarts (`PATCH` Deployment), renew 24h TTL, and view a Postgres-backed **Activity Log** per server.
+- **Simulated Game Console**: Each provisioned pod serves a themed live telemetry page (`/status.json` + auto-refreshing UI with players, memory, CPU/tickrate, uptime, console logs, and a **Simulate CPU Load** button to test HPA scaling).
 
-## Deploy per Git
-Das Repo ist die einzige Quelle. Builds ziehen den Code aus Git, die Manifeste liegen in `k8s/`.
+## Stateless Design
+- `api`, `worker`, `frontend`, and `gameserver` hold no local state. They can be scaled freely or killed at any time.
+- Sessions, cache, job queue, and rate limits live in **Redis** (intentionally without persistence).
+- Durable data (`users`, `servers`, `server_events`) lives in **Postgres** — the only stateful component.
+
+## Deploy via Git
+The repository is the single source of truth. OpenShift Builds pull code from Git, and Kubernetes manifests live in `k8s/`.
 
 ```bash
-# 1) Ordner als Repo pushen (public reicht)
+# 1) Push this folder as a Git repository (public is fine)
 git init -b main && git add . && git commit -m "init"
-git remote add origin https://github.com/DEIN-USER/DEIN-REPO.git && git push -u origin main
+git remote add origin https://github.com/YOUR-USER/YOUR-REPO.git && git push -u origin main
 
-# 2) Repo-URL in Builds und ArgoCD App eintragen, committen, pushen
-grep -rl CHANGE-ME k8s gitops | xargs sed -i 's#github.com/CHANGE-ME/freekube#github.com/DEIN-USER/DEIN-REPO#g'
+# 2) Set your repo URL in Builds and the ArgoCD App, commit, and push
+grep -rl CHANGE-ME k8s gitops | xargs sed -i 's#github.com/CHANGE-ME/freekube#github.com/YOUR-USER/YOUR-REPO#g'
 git commit -am "repo url" && git push
 
-# 3a) Simpel: kubectl-style apply
+# 3a) Simple: kubectl-style apply
 oc login ...
 ./bootstrap.sh
 
-# 3b) GitOps: ArgoCD uebernimmt (OpenShift GitOps Operator muss installiert sein)
+# 3b) GitOps: ArgoCD takes over (requires OpenShift GitOps Operator)
 ./bootstrap.sh gitops
 ```
-Das Projekt heisst fest `freekube`. Secrets (Passwoerter) erzeugt das Script im Cluster, die liegen nie im Git.
 
-### Was nach einem `git push` passiert
-- **Manifeste** (`k8s/`): mit ArgoCD automatisch (Polling alle ~3 Minuten, selfHeal und prune an).
-  Ohne ArgoCD: `oc apply -k k8s`.
-- **Images**: ein Build wird per `oc start-build freekube-api` angestossen (api, gameserver, frontend).
-  Danach rollen die Image-Trigger die Deployments automatisch neu aus.
-  Automatisch bei jedem Push geht es nur mit Webhook. Der Cluster muss dafuer von GitHub erreichbar sein,
-  bei einem lokalen Cluster also nur ueber einen Tunnel (z.B. smee.io oder ngrok).
-  URL: `oc describe bc/freekube-api | grep -A1 -i github`, im GitHub Repo unter Settings > Webhooks eintragen
-  (Content type `application/json`).
+The OpenShift project is named `freekube`. Secrets (database & Redis passwords) are generated by `bootstrap.sh` directly in the cluster and are never stored in Git.
 
-## Ressourcen-Zoo
-Deployment (api, worker, frontend, redis, gs-*), StatefulSet + PVC (postgres), CronJob (maintenance),
-Services (ClusterIP, headless), Route (TLS edge, auch pro Gameserver), ServiceAccount + Role + RoleBinding,
-Secret, HPA (api, frontend), PodDisruptionBudget, NetworkPolicies (default deny + gezielte Freigaben),
-ResourceQuota, ImageStreams + BuildConfigs, Image Triggers (neuer Build = automatischer Rollout),
-Init-Container, Liveness/Readiness Probes, Requests/Limits.
+### What happens after `git push`
+- **Manifests** (`k8s/`): synced automatically by ArgoCD (polling ~every 3 minutes, `selfHeal` and `prune` enabled). Without ArgoCD: `oc apply -k k8s`.
+- **Images**: trigger a build with `oc start-build freekube-api` (`freekube-api`, `freekube-gameserver`, `freekube-frontend`). Image triggers automatically roll out updated Deployments.
+  Automatic builds on every push require a GitHub webhook pointing to your cluster (for local clusters, use a tunnel like `smee.io` or `ngrok`).
+  Webhook URL: `oc describe bc/freekube-api | grep -A1 -i github` (configure in GitHub under *Settings > Webhooks* with content type `application/json`).
 
-## Ausprobieren
+## Kubernetes Resource Zoo
+Deployment (`api`, `worker`, `frontend`, `redis`, `gs-*`), StatefulSet + PVC (`postgres`), CronJob (`maintenance`), Services (`ClusterIP`, headless), Routes (TLS edge, including per-server Routes), ServiceAccount + Role + RoleBinding, Secrets, HPA (`api`, `worker`, `frontend`, and dynamic per-server `gs-*` HPAs), PodDisruptionBudgets, NetworkPolicies (default deny + explicit allow rules), ResourceQuota, ImageStreams + BuildConfigs, Image Triggers (new build = automatic rollout), Init Containers, Liveness/Readiness Probes, and Resource Requests/Limits.
+
+## Try It Out
 ```bash
 oc get pods -w
-# 1) Registrieren, Server anlegen, URL oeffnen
-# 2) Skalieren
+# 1) Register an account, create a server, and open its live URL
+# 2) Scale components
 oc scale deploy/api --replicas=4
 oc scale deploy/worker --replicas=3
-# 3) Stateless beweisen: API-Pods killen, Login bleibt bestehen
+# 3) Prove statelessness: kill API pods; your login session stays intact
 oc delete pod -l app=api
-# 4) Cache sehen (zweiter Aufruf = HIT)
+# 4) Inspect nginx cache (second request = HIT)
 curl -sI https://<route>/api/catalog | grep -i x-cache
-# 5) Was hat der Worker gemacht?
+# 5) Watch what the worker does
 oc logs -f deploy/worker
-# 6) Gameserver im Cluster ansehen
+# 6) Inspect provisioned game servers in the cluster
 oc get deploy,svc,route -l hoster-role=gameserver
-# 7) NetworkPolicy testen: Frontend darf nicht an die DB
-oc exec deploy/frontend -- sh -c 'nc -zv -w2 postgres 5432'   # sollte haengen/fehlschlagen
-# 8) Redis killen: Sessions, Cache, Queue weg. Maintenance stellt Jobs nach <= 2 Min wieder her
+# 7) Test NetworkPolicy: frontend cannot reach Postgres directly
+oc exec deploy/frontend -- sh -c 'nc -zv -w2 postgres 5432'   # should hang/fail
+# 8) Kill Redis: sessions, cache, and queue are wiped; maintenance recovers stuck jobs within 2 min
 oc delete pod -l app=redis
-# 9) Ablauf testen: TTL kurz setzen, neuen Server anlegen
+# 9) Test expiry: set a short TTL and create a new server
 oc set env deploy/api SERVER_TTL_HOURS=0
 ```
 
-## Code aendern und neu deployen
+## Making Changes & Redeploying
 ```bash
 git commit -am "change" && git push
-oc start-build freekube-api --follow        # rollt api + worker neu
+oc start-build freekube-api --follow        # rolls out api + worker
 oc start-build freekube-frontend --follow
+oc start-build freekube-gameserver --follow
 ```
-Aufraeumen: `oc delete project freekube` (bei ArgoCD vorher die Application loeschen).
 
-Neue Gameserver ziehen automatisch das neueste gameserver-Image (imagePullPolicy Always).
+Cleanup: `oc delete project freekube` (if using ArgoCD, delete the Application first).
 
-## Bekannte Grenzen (Absicht, ist ein Testprojekt)
-- Rate Limit nutzt X-Forwarded-For, im Zweifel faelschbar.
-- Keine E-Mail-Verifikation, kein Passwort-Reset.
-- Redis ohne Persistenz, kein HA. Postgres single instance.
-- Images kommen teils von docker.io (nginx-unprivileged). Bei Rate-Limits: Image per
-  `oc import-image` oder `oc tag` in die interne Registry holen und im Dockerfile ersetzen.
-- Gameserver sind HTTP-Dummys, keine echten Spiele-Ports.
+New game servers always pull the latest `gameserver` image (`imagePullPolicy: Always`).
+
+## Known Limitations (Intentional for a Test Project)
+- Rate limiting relies on `X-Forwarded-For`, which can be spoofed outside a trusted router.
+- No email verification or password reset.
+- Redis has no persistence and no HA; Postgres is a single instance.
+- Some base images come from `docker.io` (e.g. `nginx-unprivileged`). If you hit pull rate limits, mirror them into the internal registry via `oc import-image` or `oc tag` and update the `Dockerfile`.
+- Game servers are HTTP simulation pages, not real game UDP/TCP protocol servers.

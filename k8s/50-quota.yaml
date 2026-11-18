@@ -1,4 +1,4 @@
-# Damit der "Hoster" sich nicht selbst das Cluster vollmuellt.
+# Prevents the "hoster" from filling up the entire cluster.
 apiVersion: v1
 kind: ResourceQuota
 metadata: {name: freekube-quota}

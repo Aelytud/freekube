@@ -1,4 +1,4 @@
-# Braucht den OpenShift GitOps Operator (ArgoCD). Repo-URL anpassen.
+# Requires the OpenShift GitOps Operator (ArgoCD). Update the repo URL.
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
@@ -7,7 +7,7 @@ metadata:
 spec:
   project: default
   source:
-    repoURL: https://github.com/CHANGE-ME/freekube.git
+    repoURL: https://github.com/Aelytud/freekube.git
     targetRevision: main
     path: k8s
   destination:
@@ -17,7 +17,7 @@ spec:
     automated: {prune: true, selfHeal: true}
     syncOptions:
     - RespectIgnoreDifferences=true
-  # Image-Trigger schreiben den Image-Digest in die Deployments, das darf ArgoCD nicht zurueckdrehen
+  # Image triggers write the image digest into Deployments; ArgoCD must not revert that
   ignoreDifferences:
   - group: apps
     kind: Deployment

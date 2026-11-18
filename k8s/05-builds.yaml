@@ -1,4 +1,4 @@
-# Builds direkt aus dem Git-Repo. Repo-URL einmal anpassen (siehe README).
+# Builds directly from the Git repository. Update the repo URL once (see README).
 apiVersion: image.openshift.io/v1
 kind: ImageStream
 metadata: {name: freekube-api}
@@ -17,7 +17,7 @@ metadata: {name: freekube-api}
 spec:
   source:
     type: Git
-    git: {uri: "https://github.com/CHANGE-ME/freekube.git", ref: main}
+    git: {uri: "https://github.com/Aelytud/freekube.git", ref: main}
     contextDir: backend
   strategy: {type: Docker, dockerStrategy: {}}
   output: {to: {kind: ImageStreamTag, name: "freekube-api:latest"}}
@@ -32,7 +32,7 @@ metadata: {name: freekube-gameserver}
 spec:
   source:
     type: Git
-    git: {uri: "https://github.com/CHANGE-ME/freekube.git", ref: main}
+    git: {uri: "https://github.com/Aelytud/freekube.git", ref: main}
     contextDir: gameserver
   strategy: {type: Docker, dockerStrategy: {}}
   output: {to: {kind: ImageStreamTag, name: "freekube-gameserver:latest"}}
@@ -47,7 +47,7 @@ metadata: {name: freekube-frontend}
 spec:
   source:
     type: Git
-    git: {uri: "https://github.com/CHANGE-ME/freekube.git", ref: main}
+    git: {uri: "https://github.com/Aelytud/freekube.git", ref: main}
     contextDir: frontend
   strategy: {type: Docker, dockerStrategy: {}}
   output: {to: {kind: ImageStreamTag, name: "freekube-frontend:latest"}}

@@ -1,4 +1,4 @@
-# Alle 2 Minuten: abgelaufene Server loeschen, haengende Jobs neu einreihen, Waisen aufraeumen.
+# Every 2 minutes: delete expired servers, requeue stuck jobs, clean up orphaned resources.
 apiVersion: batch/v1
 kind: CronJob
 metadata:

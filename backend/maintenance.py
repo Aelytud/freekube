@@ -1,7 +1,7 @@
-"""Maintenance (laeuft als CronJob):
-1. abgelaufene Free-Server zum Loeschen markieren
-2. haengende Jobs (Queue ist nur in-memory) neu einreihen
-3. verwaiste Gameserver im Cluster (kein DB-Eintrag) wegraeumen
+"""Maintenance (runs as a CronJob):
+1. Mark expired free servers for deletion
+2. Requeue stuck jobs (since the Redis queue is in-memory only)
+3. Clean up orphaned game server resources in the cluster with no DB record
 """
 import k8s
 from common import enqueue, ensure_schema, invalidate, log, q
@@ -10,8 +10,10 @@ STUCK_AFTER = "2 minutes"
 
 
 def expire():
-    rows = q("UPDATE servers SET status='deleting', updated_at=now() "
-             "WHERE expires_at < now() AND status <> 'deleting' RETURNING id, user_id")
+    rows = q(
+        "UPDATE servers SET status='deleting', updated_at=now() "
+        "WHERE expires_at < now() AND status <> 'deleting' RETURNING id, user_id"
+    )
     for r in rows:
         enqueue("delete", r["id"])
         invalidate(f"servers:{r['user_id']}", "stats")
@@ -19,9 +21,11 @@ def expire():
 
 
 def requeue_stuck():
-    rows = q("UPDATE servers SET updated_at=now() "
-             f"WHERE status IN ('provisioning','deleting') AND updated_at < now() - interval '{STUCK_AFTER}' "
-             "RETURNING id, status")
+    rows = q(
+        "UPDATE servers SET updated_at=now() "
+        f"WHERE status IN ('provisioning','deleting') AND updated_at < now() - interval '{STUCK_AFTER}' "
+        "RETURNING id, status"
+    )
     for r in rows:
         enqueue("create" if r["status"] == "provisioning" else "delete", r["id"])
     log.info("requeued: %d", len(rows))
@@ -33,7 +37,7 @@ def remove_orphans():
     for d in k8s.list_items("deployments"):
         name = d["metadata"]["name"]
         if name not in known:
-            for kind in ("routes", "services", "deployments"):
+            for kind in ("hpas", "routes", "services", "deployments"):
                 k8s.delete(kind, name)
             removed += 1
     log.info("orphans removed: %d", removed)
