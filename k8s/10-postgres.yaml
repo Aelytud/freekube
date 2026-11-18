@@ -1,0 +1,50 @@
+# Einziger wirklich stateful Teil: Postgres mit PVC.
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres
+  labels: {app.kubernetes.io/part-of: freekube}
+spec:
+  clusterIP: None
+  selector: {app: postgres}
+  ports: [{port: 5432, name: pg}]
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: postgres
+  labels: {app.kubernetes.io/part-of: freekube}
+spec:
+  serviceName: postgres
+  replicas: 1
+  selector: {matchLabels: {app: postgres}}
+  template:
+    metadata:
+      labels: {app: postgres, app.kubernetes.io/part-of: freekube}
+    spec:
+      containers:
+      - name: postgres
+        image: quay.io/sclorg/postgresql-15-c9s
+        ports: [{containerPort: 5432}]
+        env:
+        - {name: POSTGRESQL_USER, valueFrom: {secretKeyRef: {name: freekube-secrets, key: POSTGRESQL_USER}}}
+        - {name: POSTGRESQL_PASSWORD, valueFrom: {secretKeyRef: {name: freekube-secrets, key: POSTGRESQL_PASSWORD}}}
+        - {name: POSTGRESQL_DATABASE, valueFrom: {secretKeyRef: {name: freekube-secrets, key: POSTGRESQL_DATABASE}}}
+        readinessProbe:
+          exec: {command: ["/usr/libexec/check-container"]}
+          initialDelaySeconds: 5
+          periodSeconds: 5
+        livenessProbe:
+          tcpSocket: {port: 5432}
+          initialDelaySeconds: 30
+          periodSeconds: 20
+        resources:
+          requests: {cpu: 100m, memory: 256Mi}
+          limits: {memory: 512Mi}
+        volumeMounts:
+        - {name: data, mountPath: /var/lib/pgsql/data}
+  volumeClaimTemplates:
+  - metadata: {name: data}
+    spec:
+      accessModes: [ReadWriteOnce]
+      resources: {requests: {storage: 2Gi}}

@@ -1,0 +1,32 @@
+# Alle 2 Minuten: abgelaufene Server loeschen, haengende Jobs neu einreihen, Waisen aufraeumen.
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: maintenance
+  labels: {app.kubernetes.io/part-of: freekube}
+spec:
+  schedule: "*/2 * * * *"
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 2
+  failedJobsHistoryLimit: 2
+  jobTemplate:
+    spec:
+      backoffLimit: 1
+      template:
+        metadata:
+          labels: {app: maintenance, app.kubernetes.io/part-of: freekube}
+        spec:
+          serviceAccountName: freekube-orchestrator
+          restartPolicy: Never
+          containers:
+          - name: maintenance
+            image: image-registry.openshift-image-registry.svc:5000/freekube/freekube-api:latest
+            imagePullPolicy: Always
+            command: ["python", "maintenance.py"]
+            env:
+            - {name: DATABASE_URL, valueFrom: {secretKeyRef: {name: freekube-secrets, key: DATABASE_URL}}}
+            - {name: REDIS_URL, valueFrom: {secretKeyRef: {name: freekube-secrets, key: REDIS_URL}}}
+            - {name: POD_NAMESPACE, valueFrom: {fieldRef: {fieldPath: metadata.namespace}}}
+            resources:
+              requests: {cpu: 20m, memory: 64Mi}
+              limits: {memory: 128Mi}

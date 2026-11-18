@@ -1,0 +1,36 @@
+# Nur der Worker (und der Maintenance-CronJob) duerfen Gameserver-Ressourcen anlegen.
+# Die API selbst hat keine Rechte im Cluster.
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: freekube-orchestrator
+  labels: {app.kubernetes.io/part-of: freekube}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: freekube-orchestrator
+  labels: {app.kubernetes.io/part-of: freekube}
+rules:
+- apiGroups: ["apps"]
+  resources: ["deployments"]
+  verbs: ["get", "list", "create", "delete"]
+- apiGroups: [""]
+  resources: ["services"]
+  verbs: ["get", "list", "create", "delete"]
+- apiGroups: ["route.openshift.io"]
+  resources: ["routes"]
+  verbs: ["get", "list", "create", "delete"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: freekube-orchestrator
+  labels: {app.kubernetes.io/part-of: freekube}
+subjects:
+- kind: ServiceAccount
+  name: freekube-orchestrator
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: freekube-orchestrator

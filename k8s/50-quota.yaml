@@ -1,0 +1,10 @@
+# Damit der "Hoster" sich nicht selbst das Cluster vollmuellt.
+apiVersion: v1
+kind: ResourceQuota
+metadata: {name: freekube-quota}
+spec:
+  hard:
+    pods: "60"
+    services: "40"
+    count/routes.route.openshift.io: "40"
+    count/deployments.apps: "40"

@@ -1,0 +1,14 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: freekube
+resources:
+- 00-rbac.yaml
+- 05-builds.yaml
+- 10-postgres.yaml
+- 11-redis.yaml
+- 20-api.yaml
+- 21-worker.yaml
+- 22-frontend.yaml
+- 30-maintenance.yaml
+- 40-networkpolicies.yaml
+- 50-quota.yaml
